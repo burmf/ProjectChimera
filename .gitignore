@@ -13,6 +13,15 @@ __pycache__/
 
 # テストや実行で生成されるデータ
 data/raw/*.csv
+data/system_data.db
+data/*.db
+
+# ログファイル
+logs/*.log
+
+# ta-lib ソースファイル
+ta-lib-*.tar.gz
+ta-lib/
 
 # Jupyter Notebookのチェックポイント
 .ipynb_checkpoints/
