@@ -2,6 +2,14 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Git Management Policy
+
+**Automatic Git Operations:**
+- Commit changes regularly after completing tasks or making significant modifications
+- Use meaningful commit messages that describe the purpose of changes
+- Stage relevant files appropriately, excluding temporary/generated files
+- Follow conventional commit format with Japanese or English descriptions as appropriate
+
 ## Development Commands
 
 ### Docker Setup (Recommended)
