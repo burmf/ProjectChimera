@@ -10,6 +10,66 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Stage relevant files appropriately, excluding temporary/generated files
 - Follow conventional commit format with Japanese or English descriptions as appropriate
 
+## System Design Optimization Guidelines
+
+### Current Architecture Analysis
+
+**Strengths:**
+- Complete Docker microservices setup (PostgreSQL + TimescaleDB + Redis)
+- Advanced AI integration with o3 model support and parallel inference
+- Comprehensive technical analysis using ta-lib
+- Full Streamlit web interface implementation
+
+**Critical Issues Identified:**
+
+1. **Database Layer Inconsistency** ✅ RESOLVED
+   - Removed legacy `database.py` (SQLite-only implementation)
+   - Standardized on `database_adapter.py` (unified SQLite/PostgreSQL support)
+   - All modules now use consistent database interface
+
+2. **Data Flow Inconsistencies** ✅ RESOLVED
+   - Fixed data structure mismatches in data_collector.py
+   - News processing pipeline validated and corrected
+   - Added proper field mapping (symbol -> pair, added news ID generation)
+
+3. **Module Implementation Status** ✅ RESOLVED
+   - **Audit Complete**: All 16 core modules are fully implemented with high quality
+   - **Key Implementations**:
+     - Portfolio management with P&L tracking
+     - Advanced backtesting with temporal constraints (look-ahead bias prevention)  
+     - AI integration with o3 model support and parallel inference
+     - Real-time stream processing (Redis-based)
+     - Technical analysis with TA-Lib integration
+     - Machine learning signal fusion with scikit-learn
+     - Performance monitoring and system health checks
+   - **Status**: Production-ready architecture
+
+### Implementation Priorities
+
+**Phase 1: Core Stability** ✅ COMPLETED
+1. ✅ Database layer unification
+2. ✅ Data collector fixes
+3. ✅ Core module audit and cleanup
+4. ⏳ Basic test coverage (in progress)
+
+**Phase 2: Integration & Testing (Current Priority)**
+5. ✅ All core modules implemented (higher quality than expected)
+6. 🔄 End-to-end integration testing (current focus)
+7. 🔄 Performance optimization and monitoring setup
+
+**Phase 3: Production Deployment (Next Priority)**
+8. 📋 Docker environment setup documentation
+9. 📋 Operational procedures and monitoring
+10. 📋 User documentation and guides
+
+### Development Best Practices
+
+- **Single Source of Truth**: Eliminate duplicate implementations
+- **Data Flow Validation**: Ensure type consistency across module boundaries
+- **Modular Design**: Keep dependencies minimal and clear
+- **Test-Driven**: Validate each component before integration
+- **Incremental**: Complete one module fully before moving to next
+
 ## Development Commands
 
 ### Docker Setup (Recommended)

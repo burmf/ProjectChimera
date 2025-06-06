@@ -10,6 +10,7 @@ import logging
 import asyncio
 import time
 import os
+import hashlib
 from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
 import yfinance as yf
@@ -59,12 +60,20 @@ class PriceCollector:
                     'interval_minutes': 60
                 })
             
-            # Insert into database
-            success = db_adapter.insert_price_data(price_records)
-            if success:
-                self.logger.info(f"Inserted {len(price_records)} price records for {symbol}")
+            # Insert into database (convert list to individual inserts)
+            success_count = 0
+            for record in price_records:
+                # Fix field name mismatch: 'symbol' -> 'pair'
+                record_fixed = record.copy()
+                record_fixed['pair'] = record_fixed.pop('symbol')
+                
+                if db_adapter.insert_price_data(record_fixed):
+                    success_count += 1
             
-            return success
+            if success_count > 0:
+                self.logger.info(f"Inserted {success_count} price records for {symbol}")
+            
+            return success_count == len(price_records)
             
         except Exception as e:
             self.logger.error(f"Price collection failed for {symbol}: {e}")
@@ -132,16 +141,18 @@ class NewsCollector:
         """Process a single news article."""
         try:
             # Clean and prepare article data
+            # Generate unique ID from URL
+            article_id = hashlib.md5(article['url'].encode()).hexdigest()
+            
             article_data = {
+                'id': article_id,
                 'url': article['url'],
                 'title': article['title'],
                 'content': article.get('description', ''),
                 'published_at': datetime.fromisoformat(
                     article['publishedAt'].replace('Z', '+00:00')
                 ),
-                'source': article['source']['name'],
-                'sentiment_score': 0.0,
-                'ai_processed': False
+                'source': article['source']['name']
             }
             
             # Insert article into database
