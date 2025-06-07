@@ -1,0 +1,40 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "Bash(chmod:*)",
+      "Bash(docker:*)",
+      "Bash(docker compose:*)",
+      "Bash(echo $VIRTUAL_ENV)",
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(grep:*)",
+      "Bash(source:*)",
+      "Bash(streamlit run:*)",
+      "Bash(pip install:*)",
+      "Bash(cp:*)",
+      "Bash(python:*)",
+      "Bash(pip3 install:*)",
+      "Bash(sudo yum update:*)",
+      "Bash(sudo yum install:*)",
+      "Bash(sudo usermod:*)",
+      "Bash(sudo systemctl start:*)",
+      "Bash(sudo systemctl:*)",
+      "Bash(./scripts/setup.sh:*)",
+      "Bash(git rm:*)",
+      "Bash(git add:*)",
+      "Bash(rm:*)",
+      "Bash(systemctl status:*)",
+      "Bash(sudo cat:*)",
+      "Bash(journalctl:*)",
+      "Bash(who:*)",
+      "Bash(ss:*)",
+      "Bash(cat:*)",
+      "Bash(dmesg:*)",
+      "Bash(sudo cp:*)",
+      "Bash(sudo chmod:*)",
+      "Bash(sudo:*)"
+    ],
+    "deny": []
+  }
+}

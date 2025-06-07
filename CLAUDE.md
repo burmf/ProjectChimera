@@ -62,6 +62,106 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 9. 📋 Operational procedures and monitoring
 10. 📋 User documentation and guides
 
+## 🚨 Critical System Design Issues - DETAILED ANALYSIS
+
+### **PHASE 1: AI Backend Architecture Problems** ✅ AUDITED
+
+**1. Over-Engineered Complexity**
+- **Issue**: Redis+Workers+Async processing creates unnecessary fragility
+- **Problem**: Single news analysis involves 5+ components with failure points
+- **Risk**: Data consistency issues between distributed components
+
+**2. AI Inference Process Flaws**
+- **Issue**: No temporal context or market regime awareness
+- **Problem**: Individual news analysis without macro environment consideration
+- **Risk**: AI decisions ignore market structure and efficiency
+
+**3. Machine Learning Implementation Errors**
+```python
+# signal_fusion.py:84-89 - CRITICAL BUG
+if future_return > 0.01:  # LOOK-AHEAD BIAS
+    target = 1  # Using future data for training
+```
+- **Issue**: Look-ahead bias makes backtests meaningless
+- **Problem**: Features lack macroeconomic context
+- **Risk**: Overfitted models with no real predictive power
+
+### **PHASE 2: Investment Strategy Fundamental Flaws** ✅ AUDITED
+
+**1. Alpha Generation Theory Gaps**
+- **Single News Dependency**: Individual articles cannot generate consistent alpha
+- **Market Context Ignorance**: No central bank policy, yield curves, or regime detection
+- **Time Horizon Confusion**: News impact timeframes vs trading frequencies misaligned
+- **Causality Assumption**: No theoretical basis for news→return relationships
+
+**2. Risk Management Superficiality**
+```python
+# risk_manager.py:19-23 - STATIC LIMITS
+max_daily_loss_pct = 5.0  # Ignores market volatility regimes
+max_position_risk_pct = 1.0  # No Kelly criterion or theoretical basis
+```
+- **No VaR Implementation**: Missing portfolio-level risk measurement
+- **Static Risk Parameters**: No dynamic adjustment for volatility regimes
+- **Correlation Blindness**: Currency pair correlations ignored
+- **No Regime Detection**: Market state changes not considered
+
+**3. Backtesting Methodology Issues**
+```python
+# backtester.py:50-80 - LOOK-AHEAD BIAS
+# Same-bar stop loss checking creates unrealistic results
+```
+- **Survivorship Bias**: Failed signals excluded from analysis
+- **Transaction Cost Gaps**: Only spread costs, missing slippage/commissions
+- **Execution Assumptions**: Perfect liquidity and fill assumptions
+
+### **REQUIRED: Systematic Redesign Framework**
+
+**Investment Strategy Overhaul:**
+```
+Multi-Factor Alpha Model:
+├── Fundamental Layer (40%)
+│   ├── Central Bank Policy Divergence
+│   ├── Economic Surprise Indices  
+│   ├── Yield Curve Dynamics
+│   └── Cross-Asset Flow Analysis
+├── Technical Layer (35%)
+│   ├── Multi-Timeframe Momentum
+│   ├── Mean Reversion Signals
+│   ├── Volatility Regime Detection
+│   └── Support/Resistance Dynamics
+├── Sentiment Layer (15%)
+│   ├── Aggregated News Sentiment
+│   ├── Positioning Data (COT)
+│   ├── Risk-On/Risk-Off Indicators
+│   └── Currency Strength Indices
+└── Risk Management (10%)
+    ├── Dynamic Position Sizing (Kelly)
+    ├── Portfolio-Level VaR
+    ├── Correlation Matrix Monitoring
+    └── Drawdown Protection Systems
+```
+
+**AI Architecture Simplification:**
+```
+Streamlined Processing:
+├── Data Layer
+│   ├── Economic Data APIs
+│   ├── Market Data Feeds
+│   └── News Aggregation
+├── Feature Engineering
+│   ├── Macro Factor Calculation
+│   ├── Technical Indicator Generation
+│   └── Sentiment Scoring
+├── Signal Generation
+│   ├── Factor Ranking Models
+│   ├── Ensemble Methods
+│   └── Regime-Aware Weighting
+└── Execution Layer
+    ├── Risk-Adjusted Sizing
+    ├── Order Management
+    └── Performance Attribution
+```
+
 ### Development Best Practices
 
 - **Single Source of Truth**: Eliminate duplicate implementations
@@ -115,22 +215,6 @@ docker compose build --no-cache && docker compose up -d
 - PostgreSQL: localhost:5432
 - Redis: localhost:6379
 
-### Legacy Direct Execution
-
-**Database Setup (SQLite - Legacy):**
-```bash
-python database.py
-```
-
-**Application Launch (Direct):**
-```bash
-streamlit run app.py
-```
-
-**Dependencies:**
-```bash
-pip install -r requirements.txt
-```
 
 ## Architecture Overview
 

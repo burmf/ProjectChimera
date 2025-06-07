@@ -1,0 +1,112 @@
+[
+  {
+    "timestamp": "2025-06-03 14:02:07.286551",
+    "market_context": {
+      "current_price": 158.8283696322959,
+      "rsi": 51.992143739797754,
+      "macd": -0.09584838449765552,
+      "volume": 2901.1295123949253,
+      "timestamp": "2025-06-03 14:02:07.286551",
+      "volatility": 0.012534941165597334
+    },
+    "ai_prediction": {
+      "action": "sell",
+      "confidence": 86.3465997094454,
+      "position_size": 43.1732998547227,
+      "expected_return": 1.8541239460774612,
+      "reasoning": "MACD\u8ca0\u8ee2 (-0.096) - \u4e0b\u964d\u30e2\u30e1\u30f3\u30bf\u30e0",
+      "market_regime": "ranging"
+    },
+    "actual_outcome": 0.02020267338079644,
+    "prediction_accuracy": 0.0,
+    "profit_impact": -0.008938027256635105
+  },
+  {
+    "timestamp": "2025-06-03 15:02:07.286557",
+    "market_context": {
+      "current_price": 162.03712730758159,
+      "rsi": 59.19724276359905,
+      "macd": 0.13057394004554954,
+      "volume": 3157.1843551178335,
+      "timestamp": "2025-06-03 15:02:07.286557",
+      "volatility": 0.00377774549173502
+    },
+    "ai_prediction": {
+      "action": "buy",
+      "confidence": 74.65492408376647,
+      "position_size": 37.32746204188324,
+      "expected_return": 1.1298976954265494,
+      "reasoning": "MACD\u6b63\u8ee2 (0.131) - \u4e0a\u6607\u30e2\u30e1\u30f3\u30bf\u30e0",
+      "market_regime": "ranging"
+    },
+    "actual_outcome": 0.008239600125195033,
+    "prediction_accuracy": 0.8958590890051976,
+    "profit_impact": 0.002888996298925723
+  },
+  {
+    "timestamp": "2025-06-03 16:02:07.286563",
+    "market_context": {
+      "current_price": 163.37224844203138,
+      "rsi": 50.70303364142362,
+      "macd": 0.25849354920689666,
+      "volume": 2752.400335658016,
+      "timestamp": "2025-06-03 16:02:07.286563",
+      "volatility": 0.006270198155852067
+    },
+    "ai_prediction": {
+      "action": "buy",
+      "confidence": 73.34966915067096,
+      "position_size": 36.67483457533548,
+      "expected_return": -1.4446005013803174,
+      "reasoning": "MACD\u6b63\u8ee2 (0.258) - \u4e0a\u6607\u30e2\u30e1\u30f3\u30bf\u30e0",
+      "market_regime": "ranging"
+    },
+    "actual_outcome": 0.004916583428382633,
+    "prediction_accuracy": 0.7334966915067096,
+    "profit_impact": 0.001619774666241011
+  },
+  {
+    "timestamp": "2025-06-03 17:02:07.286569",
+    "market_context": {
+      "current_price": 164.17548173137908,
+      "rsi": 38.80869537806238,
+      "macd": 0.6370366200472238,
+      "volume": 1920.458930386308,
+      "timestamp": "2025-06-03 17:02:07.286569",
+      "volatility": 0.00849444488417639
+    },
+    "ai_prediction": {
+      "action": "buy",
+      "confidence": 79.42027716954522,
+      "position_size": 39.71013858477261,
+      "expected_return": 0.0031146408918899817,
+      "reasoning": "MACD\u6b63\u8ee2 (0.637) - \u4e0a\u6607\u30e2\u30e1\u30f3\u30bf\u30e0",
+      "market_regime": "ranging"
+    },
+    "actual_outcome": 0.006092723205658466,
+    "prediction_accuracy": 0.9530433260345426,
+    "profit_impact": 0.0022208781356297144
+  },
+  {
+    "timestamp": "2025-06-03 18:02:07.286575",
+    "market_context": {
+      "current_price": 165.175757498724,
+      "rsi": 32.83429399554614,
+      "macd": 0.05598351879151496,
+      "volume": 4438.541601014986,
+      "timestamp": "2025-06-03 18:02:07.286575",
+      "volatility": 0.009430523456034779
+    },
+    "ai_prediction": {
+      "action": "buy",
+      "confidence": 89.44913564771215,
+      "position_size": 44.72456782385608,
+      "expected_return": -1.6518701653722976,
+      "reasoning": "RSI\u904e\u58f2\u308a\u72b6\u614b (32.8) - \u8cb7\u3044\u30b7\u30b0\u30ca\u30eb",
+      "market_regime": "trending"
+    },
+    "actual_outcome": 0.014827686684371347,
+    "prediction_accuracy": 1.0733896277725459,
+    "profit_impact": 0.006407995948741259
+  }
+]
