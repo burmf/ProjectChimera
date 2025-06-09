@@ -4,11 +4,99 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Git Management Policy
 
-**Automatic Git Operations:**
-- Commit changes regularly after completing tasks or making significant modifications
-- Use meaningful commit messages that describe the purpose of changes
-- Stage relevant files appropriately, excluding temporary/generated files
-- Follow conventional commit format with Japanese or English descriptions as appropriate
+### Automatic Git Operations
+- **Commit Frequency**: 変更ごとに必ずコミットする（忘れないように）
+- **Commit Messages**: 目的を明確に記述した意味のあるメッセージ
+- **Staging**: 関連ファイルのみステージング、一時ファイル・生成ファイルは除外
+- **Format**: 日本語・英語での従来型コミット形式に従う
+
+### Branch Strategy (Git Flow)
+
+**Main Branches:**
+- `main`: 本番環境用の安定版コード
+- `develop`: 開発統合ブランチ
+
+**Supporting Branches:**
+- `feature/[feature-name]`: 新機能開発用
+- `hotfix/[issue-name]`: 緊急修正用  
+- `release/[version]`: リリース準備用
+
+**Workflow:**
+```bash
+# 新機能開発
+git checkout develop
+git checkout -b feature/new-feature
+# ... 開発・コミット ...
+git checkout develop
+git merge feature/new-feature
+git branch -d feature/new-feature
+
+# リリース準備
+git checkout develop
+git checkout -b release/v1.0.0
+# ... バグ修正・ドキュメント更新 ...
+git checkout main
+git merge release/v1.0.0
+git tag v1.0.0
+git checkout develop
+git merge release/v1.0.0
+```
+
+### Commit Message Convention
+
+**Format:**
+```
+<type>(<scope>): <subject>
+
+<body>
+
+🤖 Generated with [Claude Code](https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
+**Types:**
+- `feat`: 新機能
+- `fix`: バグ修正
+- `docs`: ドキュメント
+- `style`: フォーマット変更
+- `refactor`: リファクタリング
+- `test`: テスト追加・修正
+- `chore`: ビルド・設定変更
+
+**Examples:**
+```
+feat(ai): OpenAI o3モデル統合を追加
+
+- 並列推論処理の実装
+- コスト追跡機能
+- JSON構造化レスポンス対応
+
+fix(database): PostgreSQL接続エラーを修正
+
+- タイムアウト設定の調整
+- 接続プール最適化
+```
+
+### Git Configuration
+
+**User Settings:**
+```bash
+git config --global user.name "ProjectChimera Dev"
+git config --global user.email "dev@projectchimera.local"
+git config --global init.defaultBranch main
+git config --global pull.rebase false
+git config --global core.autocrlf input
+```
+
+**Useful Aliases:**
+```bash
+git config --global alias.st status
+git config --global alias.co checkout
+git config --global alias.br branch
+git config --global alias.ci commit
+git config --global alias.lg "log --oneline --graph --decorate --all"
+```
 
 ## System Design Optimization Guidelines
 
