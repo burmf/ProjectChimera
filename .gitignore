@@ -1,30 +1,185 @@
-# Python仮想環境
+# =====================================
+# Python関連
+# =====================================
+# 仮想環境
 venv/
+env/
+ENV/
+.venv/
+.env/
 
-# 環境変数ファイル
-.env
-
-# Pythonキャッシュ
+# Pythonキャッシュとバイトコード
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# Mac固有ファイル
-.DS_Store
+# =====================================
+# 環境設定・秘密情報
+# =====================================
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+secrets/
+config/local.*
 
-# テストや実行で生成されるデータ
+# =====================================
+# データベース・データファイル
+# =====================================
+# SQLite
+*.db
+*.sqlite
+*.sqlite3
+
+# データファイル
 data/raw/*.csv
+data/processed/*.csv
 data/system_data.db
 data/*.db
+data/backup/
+data/temp/
 
-# ログファイル
-logs/*.log
+# =====================================
+# ログ・出力ファイル
+# =====================================
+logs/
+*.log
+*.log.*
+log/
+output/
+results/
+reports/
 
+# =====================================
+# 機械学習・AI関連
+# =====================================
+# モデルファイル
+models/
+*.pkl
+*.joblib
+*.h5
+*.model
+checkpoints/
+wandb/
+mlruns/
+
+# =====================================
+# 金融・取引関連
+# =====================================
+# バックアップファイル
+backups/
+*.backup
+
+# 一時ファイル
+temp/
+tmp/
+*.tmp
+cache/
+
+# =====================================
+# 外部ライブラリ・依存関係
+# =====================================
 # ta-lib ソースファイル
 ta-lib-*.tar.gz
 ta-lib/
+node_modules/
 
-# Jupyter Notebookのチェックポイント
-.ipynb_checkpoints/
-
-# VSCode設定
+# =====================================
+# IDE・エディタ設定
+# =====================================
+# VSCode
 .vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# PyCharm
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+*.ipynb
+
+# Vim
+*.swp
+*.swo
+*~
+
+# =====================================
+# OS固有ファイル
+# =====================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.directory
+
+# =====================================
+# Docker関連
+# =====================================
+# Docker一時ファイル
+.dockerignore
+docker-compose.override.yml
+
+# =====================================
+# テスト・カバレッジ
+# =====================================
+.coverage
+.pytest_cache/
+.tox/
+.nox/
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+htmlcov/
+
+# =====================================
+# その他
+# =====================================
+# パッケージファイル
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# プロファイリング
+.prof
