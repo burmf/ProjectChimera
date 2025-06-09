@@ -14,6 +14,7 @@ from core.redis_manager import redis_manager, PRICE_STREAM, NEWS_STREAM, AI_DECI
 from core.news_stream import news_stream
 from core.price_stream import price_stream
 from core.openai_manager import openai_manager, Priority
+from core.bitget_websocket import BitgetWebSocketClient, BitgetDataProcessor
 from modules.feature_builder import feature_builder
 from modules.signal_fusion import signal_fusion
 from modules.crypto_trader import crypto_trader
@@ -26,6 +27,8 @@ class RealtimeProcessor:
         self.processors = {}
         self.openai_api_key = os.getenv('OPENAI_API_KEY')
         self.news_api_key = os.getenv('NEWS_API_KEY')
+        self.bitget_client = None
+        self.bitget_processor = None
         
     async def start_processing(self):
         """Start all real-time processing pipelines"""
@@ -42,7 +45,8 @@ class RealtimeProcessor:
             asyncio.create_task(self.news_processor()),
             asyncio.create_task(self.ai_decision_processor()),
             asyncio.create_task(self.trade_signal_processor()),
-            asyncio.create_task(self.crypto_stream_processor())
+            asyncio.create_task(self.crypto_stream_processor()),
+            asyncio.create_task(self.bitget_websocket_processor())
         ]
         
         try:
@@ -359,6 +363,115 @@ If no trade, set trade_warranted to false and other fields to "N/A" or 0."""
             except Exception as e:
                 logger.error(f"Crypto stream processor error: {e}")
                 await asyncio.sleep(60)
+    
+    async def bitget_websocket_processor(self):
+        """Process Bitget WebSocket real-time data"""
+        logger.info("Bitget WebSocket processor started")
+        
+        while self.running:
+            try:
+                # Initialize Bitget client if not exists
+                if not self.bitget_client:
+                    self.bitget_client = BitgetWebSocketClient()
+                    self.bitget_processor = BitgetDataProcessor()
+                
+                # Connect to Bitget WebSocket
+                success = await self.bitget_client.connect()
+                if not success:
+                    logger.error("Failed to connect to Bitget WebSocket")
+                    await asyncio.sleep(30)
+                    continue
+                
+                # Subscribe to major cryptocurrency pairs
+                major_pairs = ["BTCUSDT", "ETHUSDT", "ADAUSDT", "XRPUSDT", "SOLUSDT"]
+                
+                for symbol in major_pairs:
+                    await self.bitget_client.subscribe_ticker(symbol, self.on_bitget_ticker)
+                    await asyncio.sleep(0.5)  # Avoid rate limiting
+                
+                # Subscribe to orderbook for BTC (for spread analysis)
+                await self.bitget_client.subscribe_orderbook("BTCUSDT", callback=self.on_bitget_orderbook)
+                
+                logger.info(f"Subscribed to {len(major_pairs)} Bitget symbols")
+                
+                # Listen for messages
+                await self.bitget_client.listen()
+                
+            except Exception as e:
+                logger.error(f"Bitget WebSocket processor error: {e}")
+                
+                # Cleanup on error
+                if self.bitget_client:
+                    try:
+                        await self.bitget_client.disconnect()
+                    except:
+                        pass
+                    self.bitget_client = None
+                
+                await asyncio.sleep(30)  # Wait before retry
+    
+    async def on_bitget_ticker(self, data):
+        """Handle Bitget ticker updates"""
+        try:
+            processed = await self.bitget_processor.process_ticker_data(data)
+            if not processed:
+                return
+            
+            # Convert to our price data format
+            price_data = {
+                'pair': processed['symbol'],
+                'timestamp': processed['timestamp'].isoformat(),
+                'price': processed['price'],
+                'bid': processed['bid'],
+                'ask': processed['ask'],
+                'volume': processed['volume'],
+                'change_24h': processed['change_24h'],
+                'source': 'bitget'
+            }
+            
+            # Publish to Redis price stream
+            redis_manager.add_to_stream(PRICE_STREAM, price_data)
+            
+            # Log significant price movements (>1%)
+            if abs(processed['change_24h']) > 1.0:
+                logger.info(f"Significant movement: {processed['symbol']} {processed['change_24h']:+.2f}% at ${processed['price']:.4f}")
+            
+        except Exception as e:
+            logger.error(f"Bitget ticker processing error: {e}")
+    
+    async def on_bitget_orderbook(self, data):
+        """Handle Bitget orderbook updates"""
+        try:
+            processed = await self.bitget_processor.process_orderbook_data(data)
+            if not processed:
+                return
+            
+            # Calculate spread analytics
+            if processed['bids'] and processed['asks']:
+                best_bid = processed['bids'][0][0]
+                best_ask = processed['asks'][0][0]
+                spread = best_ask - best_bid
+                spread_pct = (spread / best_bid) * 100 if best_bid > 0 else 0
+                
+                # Publish spread data for trading decisions
+                spread_data = {
+                    'pair': processed['symbol'],
+                    'timestamp': processed['timestamp'].isoformat(),
+                    'best_bid': best_bid,
+                    'best_ask': best_ask,
+                    'spread': spread,
+                    'spread_pct': spread_pct,
+                    'source': 'bitget'
+                }
+                
+                redis_manager.add_to_stream('spread_analysis', spread_data)
+                
+                # Alert on wide spreads (>0.1%)
+                if spread_pct > 0.1:
+                    logger.warning(f"Wide spread detected: {processed['symbol']} {spread_pct:.3f}%")
+            
+        except Exception as e:
+            logger.error(f"Bitget orderbook processing error: {e}")
     
     def get_processor_status(self) -> Dict[str, Any]:
         """Get status of all processors"""
