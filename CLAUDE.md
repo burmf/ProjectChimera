@@ -383,3 +383,145 @@ Supports multiple OpenAI models with parallel processing:
 **Networks:**
 - Isolated `bot_network` for service communication
 - Health checks and automatic restarts for reliability
+
+## AI Department System (部門別AIシステム)
+
+### Overview
+
+ProjectChimeraの新しいAI部門システムは、専門分野別に特化したAIエージェントが協調して投資判断を行う先進的なアーキテクチャです。
+
+### Architecture Components
+
+**Core Components:**
+- `AIOrchestrator`: 部門間協調システムの中央オーケストレーター
+- `AIAgentBase`: 全AI部門の基底クラス
+- `DepartmentCoordination`: 部門間連携管理
+- `DepartmentPrompts`: 部門別プロンプト管理システム
+
+**AI Departments:**
+1. **Technical Analysis AI** (`TechnicalAnalysisAI`)
+   - RSI、MACD、ストキャスティクス等のテクニカル指標分析
+   - チャートパターン認識（ダブルトップ・ボトム、三角保ち合い等）
+   - サポート・レジスタンス分析
+   - モメンタム分析とトレンド判定
+
+2. **Fundamental Analysis AI** (`FundamentalAnalysisAI`)
+   - 経済指標分析（GDP、インフレ、雇用統計等）
+   - 中央銀行政策分析と金利差評価
+   - 地政学的リスク評価
+   - 通貨相対価値分析
+
+3. **Sentiment Analysis AI** (`SentimentAnalysisAI`)
+   - ニュース記事の感情分析
+   - ソーシャルメディア・センチメント評価
+   - 市場恐怖・貪欲指数の分析
+   - リスクオン・オフの判定
+
+4. **Risk Management AI** (`RiskManagementAI`)
+   - ポートフォリオリスク評価
+   - VaR（Value at Risk）計算
+   - ドローダウン分析
+   - ポジションサイジング最適化
+
+5. **Execution & Portfolio AI** (`ExecutionPortfolioAI`)
+   - 注文執行戦略
+   - ポートフォリオバランス管理
+   - 流動性分析
+   - スリッページ最小化
+
+### Department Coordination System
+
+**Collaboration Rules:**
+各決定タイプに応じた部門間協調ルールを定義：
+
+```python
+# トレードシグナル生成時の協調例
+{
+    'required_departments': [TECHNICAL, SENTIMENT, RISK],
+    'optional_departments': [FUNDAMENTAL],
+    'consensus_threshold': 0.6,
+    'weights': {
+        'TECHNICAL': 0.35,
+        'FUNDAMENTAL': 0.25, 
+        'SENTIMENT': 0.20,
+        'RISK': 0.20
+    }
+}
+```
+
+**Decision Types:**
+- `TRADE_SIGNAL`: トレードシグナル生成
+- `RISK_ASSESSMENT`: リスク評価
+- `MARKET_ANALYSIS`: 市場分析
+- `PORTFOLIO_REBALANCE`: ポートフォリオリバランス
+- `EMERGENCY_ACTION`: 緊急時対応
+
+### Integration Features
+
+**Parallel Processing:**
+- 複数部門による並行分析処理
+- 非同期処理によるパフォーマンス最適化
+- エラーハンドリングとフォールバック機能
+
+**Consensus Building:**
+- 重み付きコンセンサス計算
+- 信頼度閾値による意思決定フィルタ
+- 部門間意見の統合ロジック
+
+**Performance Monitoring:**
+- 部門別パフォーマンス追跡
+- コスト管理（API使用料等）
+- 処理時間メトリクス
+
+### Usage Example
+
+```python
+from core.ai_orchestrator import AIOrchestrator, MarketSituation
+from departments.technical_analysis_ai import TechnicalAnalysisAI
+
+# オーケストレーター初期化
+orchestrator = AIOrchestrator()
+
+# 部門登録
+orchestrator.register_department(DepartmentType.TECHNICAL, TechnicalAnalysisAI())
+
+# 市場分析実行
+market_data = MarketSituation(
+    price_data={'close': 150.5, 'volume': 100000},
+    technical_indicators={'rsi': 65.0},
+    news_data=[...],
+    timestamp=datetime.now()
+)
+
+decision = await orchestrator.analyze_market_situation(
+    market_data, 
+    DecisionType.TRADE_SIGNAL
+)
+
+print(f"Action: {decision.final_decision['action']}")
+print(f"Confidence: {decision.consensus_confidence:.3f}")
+```
+
+### Testing
+
+**Integration Tests:**
+- `test_ai_department_simple.py`: モックベースの統合テスト
+- 部門登録、市場分析、エラーハンドリングの検証
+- 100%テスト成功率を達成
+
+**Test Coverage:**
+- 部門登録機能
+- 市場状況分析
+- 複数シナリオ対応
+- エラー処理
+- 統計情報管理
+
+### Benefits
+
+1. **専門性**: 各部門が特定分野に特化した高度な分析
+2. **協調性**: 複数の視点を統合した総合的判断
+3. **拡張性**: 新しい部門の追加が容易
+4. **信頼性**: エラーハンドリングとフォールバック機能
+5. **透明性**: 各部門の判断根拠が明確
+
+このAI部門システムにより、ProjectChimeraは従来の単一AIモデルを超えた、より洗練された投資判断システムを実現しています。
