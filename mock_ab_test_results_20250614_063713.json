@@ -1,0 +1,839 @@
+{
+  "test_id": "mock_test_20250614_063713",
+  "models_tested": [
+    "gpt-4",
+    "gpt-4-turbo",
+    "o3-mini",
+    "o3"
+  ],
+  "total_samples": 12,
+  "results": [
+    {
+      "sample_id": 0,
+      "input_data": {
+        "news": "Federal Reserve raises interest rates by 0.25% to combat inflation",
+        "expected_direction": "long",
+        "category": "monetary_policy",
+        "difficulty": 0.3
+      },
+      "model_responses": [
+        {
+          "model": "gpt-4",
+          "trade_warranted": true,
+          "direction": "short",
+          "confidence": 0.5608873453743622,
+          "reasoning": "gpt-4 analysis of monetary_policy scenario",
+          "processing_time_ms": 1421.2611941612315,
+          "cost_usd": 0.08,
+          "success": false,
+          "expected_direction": "long",
+          "difficulty": 0.3
+        },
+        {
+          "model": "gpt-4-turbo",
+          "trade_warranted": true,
+          "direction": "long",
+          "confidence": 0.8555838707961111,
+          "reasoning": "gpt-4-turbo analysis of monetary_policy scenario",
+          "processing_time_ms": 1099.5796033903487,
+          "cost_usd": 0.04,
+          "success": true,
+          "expected_direction": "long",
+          "difficulty": 0.3
+        },
+        {
+          "model": "o3-mini",
+          "trade_warranted": true,
+          "direction": "long",
+          "confidence": 0.8439746921140945,
+          "reasoning": "o3-mini analysis of monetary_policy scenario",
+          "processing_time_ms": 984.3304090974498,
+          "cost_usd": 0.03,
+          "success": true,
+          "expected_direction": "long",
+          "difficulty": 0.3
+        },
+        {
+          "model": "o3",
+          "trade_warranted": true,
+          "direction": "long",
+          "confidence": 0.8420281775534559,
+          "reasoning": "o3 analysis of monetary_policy scenario",
+          "processing_time_ms": 2340.2888756768994,
+          "cost_usd": 0.15,
+          "success": true,
+          "expected_direction": "long",
+          "difficulty": 0.3
+        }
+      ],
+      "timestamp": "2025-06-14T06:36:58.897533"
+    },
+    {
+      "sample_id": 1,
+      "input_data": {
+        "news": "US non-farm payrolls surge by 350,000, beating expectations",
+        "expected_direction": "long",
+        "category": "employment",
+        "difficulty": 0.2
+      },
+      "model_responses": [
+        {
+          "model": "gpt-4",
+          "trade_warranted": true,
+          "direction": "long",
+          "confidence": 0.6894521881052906,
+          "reasoning": "gpt-4 analysis of employment scenario",
+          "processing_time_ms": 1676.521720474253,
+          "cost_usd": 0.08,
+          "success": true,
+          "expected_direction": "long",
+          "difficulty": 0.2
+        },
+        {
+          "model": "gpt-4-turbo",
+          "trade_warranted": true,
+          "direction": "long",
+          "confidence": 0.7412417354456288,
+          "reasoning": "gpt-4-turbo analysis of employment scenario",
+          "processing_time_ms": 1220.0400560959954,
+          "cost_usd": 0.04,
+          "success": true,
+          "expected_direction": "long",
+          "difficulty": 0.2
+        },
+        {
+          "model": "o3-mini",
+          "trade_warranted": true,
+          "direction": "long",
+          "confidence": 0.8970198652357311,
+          "reasoning": "o3-mini analysis of employment scenario",
+          "processing_time_ms": 911.3959118383154,
+          "cost_usd": 0.03,
+          "success": true,
+          "expected_direction": "long",
+          "difficulty": 0.2
+        },
+        {
+          "model": "o3",
+          "trade_warranted": true,
+          "direction": "long",
+          "confidence": 0.8672622488616427,
+          "reasoning": "o3 analysis of employment scenario",
+          "processing_time_ms": 3252.781661211621,
+          "cost_usd": 0.15,
+          "success": true,
+          "expected_direction": "long",
+          "difficulty": 0.2
+        }
+      ],
+      "timestamp": "2025-06-14T06:37:00.525588"
+    },
+    {
+      "sample_id": 2,
+      "input_data": {
+        "news": "US GDP growth accelerates to 3.2% in Q4, above forecasts",
+        "expected_direction": "long",
+        "category": "growth",
+        "difficulty": 0.3
+      },
+      "model_responses": [
+        {
+          "model": "gpt-4",
+          "trade_warranted": true,
+          "direction": "long",
+          "confidence": 0.7894789482333299,
+          "reasoning": "gpt-4 analysis of growth scenario",
+          "processing_time_ms": 1224.5799120254057,
+          "cost_usd": 0.08,
+          "success": true,
+          "expected_direction": "long",
+          "difficulty": 0.3
+        },
+        {
+          "model": "gpt-4-turbo",
+          "trade_warranted": true,
+          "direction": "long",
+          "confidence": 0.7986758679050627,
+          "reasoning": "gpt-4-turbo analysis of growth scenario",
+          "processing_time_ms": 1261.5771533304724,
+          "cost_usd": 0.04,
+          "success": true,
+          "expected_direction": "long",
+          "difficulty": 0.3
+        },
+        {
+          "model": "o3-mini",
+          "trade_warranted": true,
+          "direction": "long",
+          "confidence": 0.760566107146021,
+          "reasoning": "o3-mini analysis of growth scenario",
+          "processing_time_ms": 866.6631282003258,
+          "cost_usd": 0.03,
+          "success": true,
+          "expected_direction": "long",
+          "difficulty": 0.3
+        },
+        {
+          "model": "o3",
+          "trade_warranted": true,
+          "direction": "long",
+          "confidence": 0.9247577457089925,
+          "reasoning": "o3 analysis of growth scenario",
+          "processing_time_ms": 3428.5166593751105,
+          "cost_usd": 0.15,
+          "success": true,
+          "expected_direction": "long",
+          "difficulty": 0.3
+        }
+      ],
+      "timestamp": "2025-06-14T06:37:02.243462"
+    },
+    {
+      "sample_id": 3,
+      "input_data": {
+        "news": "Trade war escalates as new tariffs announced",
+        "expected_direction": "short",
+        "category": "geopolitical",
+        "difficulty": 0.4
+      },
+      "model_responses": [
+        {
+          "model": "gpt-4",
+          "trade_warranted": true,
+          "direction": "short",
+          "confidence": 0.8574096215618993,
+          "reasoning": "gpt-4 analysis of geopolitical scenario",
+          "processing_time_ms": 1222.6529760987821,
+          "cost_usd": 0.08,
+          "success": true,
+          "expected_direction": "short",
+          "difficulty": 0.4
+        },
+        {
+          "model": "gpt-4-turbo",
+          "trade_warranted": true,
+          "direction": "short",
+          "confidence": 0.7777942502706272,
+          "reasoning": "gpt-4-turbo analysis of geopolitical scenario",
+          "processing_time_ms": 1437.8100503584278,
+          "cost_usd": 0.04,
+          "success": true,
+          "expected_direction": "short",
+          "difficulty": 0.4
+        },
+        {
+          "model": "o3-mini",
+          "trade_warranted": true,
+          "direction": "short",
+          "confidence": 0.6857394412625278,
+          "reasoning": "o3-mini analysis of geopolitical scenario",
+          "processing_time_ms": 872.5595602486751,
+          "cost_usd": 0.03,
+          "success": true,
+          "expected_direction": "short",
+          "difficulty": 0.4
+        },
+        {
+          "model": "o3",
+          "trade_warranted": false,
+          "direction": "hold",
+          "confidence": 0.6614445236768728,
+          "reasoning": "o3 analysis of geopolitical scenario",
+          "processing_time_ms": 2708.9237787132342,
+          "cost_usd": 0.15,
+          "success": false,
+          "expected_direction": "short",
+          "difficulty": 0.4
+        }
+      ],
+      "timestamp": "2025-06-14T06:37:03.599958"
+    },
+    {
+      "sample_id": 4,
+      "input_data": {
+        "news": "Banking sector stress tests reveal potential vulnerabilities",
+        "expected_direction": "short",
+        "category": "financial",
+        "difficulty": 0.5
+      },
+      "model_responses": [
+        {
+          "model": "gpt-4",
+          "trade_warranted": true,
+          "direction": "short",
+          "confidence": 0.6154472977598385,
+          "reasoning": "gpt-4 analysis of financial scenario",
+          "processing_time_ms": 1647.5731167559654,
+          "cost_usd": 0.08,
+          "success": true,
+          "expected_direction": "short",
+          "difficulty": 0.5
+        },
+        {
+          "model": "gpt-4-turbo",
+          "trade_warranted": true,
+          "direction": "short",
+          "confidence": 0.6613248600524108,
+          "reasoning": "gpt-4-turbo analysis of financial scenario",
+          "processing_time_ms": 1180.264923679444,
+          "cost_usd": 0.04,
+          "success": true,
+          "expected_direction": "short",
+          "difficulty": 0.5
+        },
+        {
+          "model": "o3-mini",
+          "trade_warranted": false,
+          "direction": "hold",
+          "confidence": 0.583887927070603,
+          "reasoning": "o3-mini analysis of financial scenario",
+          "processing_time_ms": 845.8144677388916,
+          "cost_usd": 0.03,
+          "success": false,
+          "expected_direction": "short",
+          "difficulty": 0.5
+        },
+        {
+          "model": "o3",
+          "trade_warranted": true,
+          "direction": "short",
+          "confidence": 0.8161492329003461,
+          "reasoning": "o3 analysis of financial scenario",
+          "processing_time_ms": 2416.94600108851,
+          "cost_usd": 0.15,
+          "success": true,
+          "expected_direction": "short",
+          "difficulty": 0.5
+        }
+      ],
+      "timestamp": "2025-06-14T06:37:04.810319"
+    },
+    {
+      "sample_id": 5,
+      "input_data": {
+        "news": "Economic recession indicators flash warning signals",
+        "expected_direction": "short",
+        "category": "economic",
+        "difficulty": 0.3
+      },
+      "model_responses": [
+        {
+          "model": "gpt-4",
+          "trade_warranted": false,
+          "direction": "hold",
+          "confidence": 0.48192937678419345,
+          "reasoning": "gpt-4 analysis of economic scenario",
+          "processing_time_ms": 1469.794528473825,
+          "cost_usd": 0.08,
+          "success": false,
+          "expected_direction": "short",
+          "difficulty": 0.3
+        },
+        {
+          "model": "gpt-4-turbo",
+          "trade_warranted": true,
+          "direction": "short",
+          "confidence": 0.9020555275476918,
+          "reasoning": "gpt-4-turbo analysis of economic scenario",
+          "processing_time_ms": 1069.8860362410842,
+          "cost_usd": 0.04,
+          "success": true,
+          "expected_direction": "short",
+          "difficulty": 0.3
+        },
+        {
+          "model": "o3-mini",
+          "trade_warranted": true,
+          "direction": "long",
+          "confidence": 0.6134705194504573,
+          "reasoning": "o3-mini analysis of economic scenario",
+          "processing_time_ms": 1184.2958458526723,
+          "cost_usd": 0.03,
+          "success": false,
+          "expected_direction": "short",
+          "difficulty": 0.3
+        },
+        {
+          "model": "o3",
+          "trade_warranted": true,
+          "direction": "short",
+          "confidence": 0.8334354165552708,
+          "reasoning": "o3 analysis of economic scenario",
+          "processing_time_ms": 2388.161074021597,
+          "cost_usd": 0.15,
+          "success": true,
+          "expected_direction": "short",
+          "difficulty": 0.3
+        }
+      ],
+      "timestamp": "2025-06-14T06:37:06.005630"
+    },
+    {
+      "sample_id": 6,
+      "input_data": {
+        "news": "Central bank officials express mixed views on policy direction",
+        "expected_direction": "hold",
+        "category": "neutral",
+        "difficulty": 0.8
+      },
+      "model_responses": [
+        {
+          "model": "gpt-4",
+          "trade_warranted": true,
+          "direction": "short",
+          "confidence": 0.5956881138380113,
+          "reasoning": "gpt-4 analysis of neutral scenario",
+          "processing_time_ms": 1809.1084411912884,
+          "cost_usd": 0.08,
+          "success": false,
+          "expected_direction": "hold",
+          "difficulty": 0.8
+        },
+        {
+          "model": "gpt-4-turbo",
+          "trade_warranted": true,
+          "direction": "short",
+          "confidence": 0.5400950105368495,
+          "reasoning": "gpt-4-turbo analysis of neutral scenario",
+          "processing_time_ms": 927.4982141697375,
+          "cost_usd": 0.04,
+          "success": false,
+          "expected_direction": "hold",
+          "difficulty": 0.8
+        },
+        {
+          "model": "o3-mini",
+          "trade_warranted": true,
+          "direction": "short",
+          "confidence": 0.6409485624359558,
+          "reasoning": "o3-mini analysis of neutral scenario",
+          "processing_time_ms": 1098.8862434553998,
+          "cost_usd": 0.03,
+          "success": false,
+          "expected_direction": "hold",
+          "difficulty": 0.8
+        },
+        {
+          "model": "o3",
+          "trade_warranted": true,
+          "direction": "short",
+          "confidence": 0.6350347409603894,
+          "reasoning": "o3 analysis of neutral scenario",
+          "processing_time_ms": 3437.8132226402377,
+          "cost_usd": 0.15,
+          "success": false,
+          "expected_direction": "hold",
+          "difficulty": 0.8
+        }
+      ],
+      "timestamp": "2025-06-14T06:37:07.726562"
+    },
+    {
+      "sample_id": 7,
+      "input_data": {
+        "news": "Economic indicators show conflicting signals",
+        "expected_direction": "hold",
+        "category": "mixed",
+        "difficulty": 0.9
+      },
+      "model_responses": [
+        {
+          "model": "gpt-4",
+          "trade_warranted": true,
+          "direction": "short",
+          "confidence": 0.6185854649375311,
+          "reasoning": "gpt-4 analysis of mixed scenario",
+          "processing_time_ms": 1504.5864069345203,
+          "cost_usd": 0.08,
+          "success": false,
+          "expected_direction": "hold",
+          "difficulty": 0.9
+        },
+        {
+          "model": "gpt-4-turbo",
+          "trade_warranted": true,
+          "direction": "short",
+          "confidence": 0.5090842169658045,
+          "reasoning": "gpt-4-turbo analysis of mixed scenario",
+          "processing_time_ms": 1218.8948200319653,
+          "cost_usd": 0.04,
+          "success": false,
+          "expected_direction": "hold",
+          "difficulty": 0.9
+        },
+        {
+          "model": "o3-mini",
+          "trade_warranted": false,
+          "direction": "hold",
+          "confidence": 0.8541425726637981,
+          "reasoning": "o3-mini analysis of mixed scenario",
+          "processing_time_ms": 740.7443697270583,
+          "cost_usd": 0.03,
+          "success": true,
+          "expected_direction": "hold",
+          "difficulty": 0.9
+        },
+        {
+          "model": "o3",
+          "trade_warranted": false,
+          "direction": "hold",
+          "confidence": 0.7233891061826709,
+          "reasoning": "o3 analysis of mixed scenario",
+          "processing_time_ms": 2326.125946006424,
+          "cost_usd": 0.15,
+          "success": true,
+          "expected_direction": "hold",
+          "difficulty": 0.9
+        }
+      ],
+      "timestamp": "2025-06-14T06:37:08.891861"
+    },
+    {
+      "sample_id": 8,
+      "input_data": {
+        "news": "Market volatility increases amid uncertain global outlook",
+        "expected_direction": "hold",
+        "category": "uncertainty",
+        "difficulty": 0.7
+      },
+      "model_responses": [
+        {
+          "model": "gpt-4",
+          "trade_warranted": true,
+          "direction": "short",
+          "confidence": 0.4594314645113243,
+          "reasoning": "gpt-4 analysis of uncertainty scenario",
+          "processing_time_ms": 1743.28458931957,
+          "cost_usd": 0.08,
+          "success": false,
+          "expected_direction": "hold",
+          "difficulty": 0.7
+        },
+        {
+          "model": "gpt-4-turbo",
+          "trade_warranted": true,
+          "direction": "long",
+          "confidence": 0.5159384621669173,
+          "reasoning": "gpt-4-turbo analysis of uncertainty scenario",
+          "processing_time_ms": 1195.30163737377,
+          "cost_usd": 0.04,
+          "success": false,
+          "expected_direction": "hold",
+          "difficulty": 0.7
+        },
+        {
+          "model": "o3-mini",
+          "trade_warranted": false,
+          "direction": "hold",
+          "confidence": 0.7859734095517038,
+          "reasoning": "o3-mini analysis of uncertainty scenario",
+          "processing_time_ms": 1182.2961000329815,
+          "cost_usd": 0.03,
+          "success": true,
+          "expected_direction": "hold",
+          "difficulty": 0.7
+        },
+        {
+          "model": "o3",
+          "trade_warranted": true,
+          "direction": "short",
+          "confidence": 0.6488792364207584,
+          "reasoning": "o3 analysis of uncertainty scenario",
+          "processing_time_ms": 2327.8283334763146,
+          "cost_usd": 0.15,
+          "success": false,
+          "expected_direction": "hold",
+          "difficulty": 0.7
+        }
+      ],
+      "timestamp": "2025-06-14T06:37:10.057218"
+    },
+    {
+      "sample_id": 9,
+      "input_data": {
+        "price_data": {
+          "close": 151.2,
+          "open": 150.0,
+          "trend": "upward"
+        },
+        "expected_direction": "long",
+        "category": "technical",
+        "difficulty": 0.4
+      },
+      "model_responses": [
+        {
+          "model": "gpt-4",
+          "trade_warranted": true,
+          "direction": "long",
+          "confidence": 0.653271015517361,
+          "reasoning": "gpt-4 analysis of technical scenario",
+          "processing_time_ms": 1928.8381026271343,
+          "cost_usd": 0.08,
+          "success": true,
+          "expected_direction": "long",
+          "difficulty": 0.4
+        },
+        {
+          "model": "gpt-4-turbo",
+          "trade_warranted": false,
+          "direction": "hold",
+          "confidence": 0.47984252548709266,
+          "reasoning": "gpt-4-turbo analysis of technical scenario",
+          "processing_time_ms": 1377.9775787822819,
+          "cost_usd": 0.04,
+          "success": false,
+          "expected_direction": "long",
+          "difficulty": 0.4
+        },
+        {
+          "model": "o3-mini",
+          "trade_warranted": true,
+          "direction": "long",
+          "confidence": 0.9052887085376704,
+          "reasoning": "o3-mini analysis of technical scenario",
+          "processing_time_ms": 680.7433314416589,
+          "cost_usd": 0.03,
+          "success": true,
+          "expected_direction": "long",
+          "difficulty": 0.4
+        },
+        {
+          "model": "o3",
+          "trade_warranted": true,
+          "direction": "long",
+          "confidence": 0.7847554896173093,
+          "reasoning": "o3 analysis of technical scenario",
+          "processing_time_ms": 2729.2930174524754,
+          "cost_usd": 0.15,
+          "success": true,
+          "expected_direction": "long",
+          "difficulty": 0.4
+        }
+      ],
+      "timestamp": "2025-06-14T06:37:11.423788"
+    },
+    {
+      "sample_id": 10,
+      "input_data": {
+        "price_data": {
+          "close": 148.8,
+          "open": 150.0,
+          "trend": "downward"
+        },
+        "expected_direction": "short",
+        "category": "technical",
+        "difficulty": 0.4
+      },
+      "model_responses": [
+        {
+          "model": "gpt-4",
+          "trade_warranted": false,
+          "direction": "hold",
+          "confidence": 0.4363483342241194,
+          "reasoning": "gpt-4 analysis of technical scenario",
+          "processing_time_ms": 1533.2634292719645,
+          "cost_usd": 0.08,
+          "success": false,
+          "expected_direction": "short",
+          "difficulty": 0.4
+        },
+        {
+          "model": "gpt-4-turbo",
+          "trade_warranted": true,
+          "direction": "short",
+          "confidence": 0.8043998335110369,
+          "reasoning": "gpt-4-turbo analysis of technical scenario",
+          "processing_time_ms": 831.5576729026407,
+          "cost_usd": 0.04,
+          "success": true,
+          "expected_direction": "short",
+          "difficulty": 0.4
+        },
+        {
+          "model": "o3-mini",
+          "trade_warranted": true,
+          "direction": "long",
+          "confidence": 0.5481379088887488,
+          "reasoning": "o3-mini analysis of technical scenario",
+          "processing_time_ms": 1111.4131990937067,
+          "cost_usd": 0.03,
+          "success": false,
+          "expected_direction": "short",
+          "difficulty": 0.4
+        },
+        {
+          "model": "o3",
+          "trade_warranted": true,
+          "direction": "short",
+          "confidence": 0.7276375703789058,
+          "reasoning": "o3 analysis of technical scenario",
+          "processing_time_ms": 2663.838803794527,
+          "cost_usd": 0.15,
+          "success": true,
+          "expected_direction": "short",
+          "difficulty": 0.4
+        }
+      ],
+      "timestamp": "2025-06-14T06:37:12.757218"
+    },
+    {
+      "sample_id": 11,
+      "input_data": {
+        "news": "Inflation data mixed while employment remains strong",
+        "expected_direction": "hold",
+        "category": "complex",
+        "difficulty": 0.85
+      },
+      "model_responses": [
+        {
+          "model": "gpt-4",
+          "trade_warranted": false,
+          "direction": "hold",
+          "confidence": 0.8936858018745242,
+          "reasoning": "gpt-4 analysis of complex scenario",
+          "processing_time_ms": 1431.3526094443364,
+          "cost_usd": 0.08,
+          "success": true,
+          "expected_direction": "hold",
+          "difficulty": 0.85
+        },
+        {
+          "model": "gpt-4-turbo",
+          "trade_warranted": true,
+          "direction": "long",
+          "confidence": 0.589588377247127,
+          "reasoning": "gpt-4-turbo analysis of complex scenario",
+          "processing_time_ms": 943.156911167637,
+          "cost_usd": 0.04,
+          "success": false,
+          "expected_direction": "hold",
+          "difficulty": 0.85
+        },
+        {
+          "model": "o3-mini",
+          "trade_warranted": false,
+          "direction": "hold",
+          "confidence": 0.7234012795813367,
+          "reasoning": "o3-mini analysis of complex scenario",
+          "processing_time_ms": 623.037023182775,
+          "cost_usd": 0.03,
+          "success": true,
+          "expected_direction": "hold",
+          "difficulty": 0.85
+        },
+        {
+          "model": "o3",
+          "trade_warranted": true,
+          "direction": "short",
+          "confidence": 0.5923942749858412,
+          "reasoning": "o3 analysis of complex scenario",
+          "processing_time_ms": 2106.2704533936585,
+          "cost_usd": 0.15,
+          "success": false,
+          "expected_direction": "hold",
+          "difficulty": 0.85
+        }
+      ],
+      "timestamp": "2025-06-14T06:37:13.811498"
+    }
+  ],
+  "analysis": {
+    "model_performance": {
+      "gpt-4": {
+        "accuracy": 0.5,
+        "avg_confidence": 0.6376345810601487,
+        "avg_cost": 0.07999999999999999,
+        "avg_response_time": 1551.0680855648563,
+        "total_cost": 0.9599999999999999,
+        "cost_efficiency": 0.5208333333333334,
+        "time_efficiency": 0.3223585119526934,
+        "category_breakdown": {
+          "monetary_policy": 0.0,
+          "employment": 1.0,
+          "growth": 1.0,
+          "geopolitical": 1.0,
+          "financial": 1.0,
+          "economic": 0.0,
+          "neutral": 0.0,
+          "mixed": 0.0,
+          "uncertainty": 0.0,
+          "technical": 0.5,
+          "complex": 1.0
+        }
+      },
+      "gpt-4-turbo": {
+        "accuracy": 0.5833333333333334,
+        "avg_confidence": 0.6813020448276967,
+        "avg_cost": 0.039999999999999994,
+        "avg_response_time": 1146.9620547936502,
+        "total_cost": 0.4799999999999999,
+        "cost_efficiency": 1.2152777777777781,
+        "time_efficiency": 0.5085899144573539,
+        "category_breakdown": {
+          "monetary_policy": 1.0,
+          "employment": 1.0,
+          "growth": 1.0,
+          "geopolitical": 1.0,
+          "financial": 1.0,
+          "economic": 1.0,
+          "neutral": 0.0,
+          "mixed": 0.0,
+          "uncertainty": 0.0,
+          "technical": 0.5,
+          "complex": 0.0
+        }
+      },
+      "o3-mini": {
+        "accuracy": 0.6666666666666666,
+        "avg_confidence": 0.7368792494948875,
+        "avg_cost": 0.03000000000000001,
+        "avg_response_time": 925.1816324924926,
+        "total_cost": 0.3600000000000001,
+        "cost_efficiency": 1.8518518518518512,
+        "time_efficiency": 0.7205792281788261,
+        "category_breakdown": {
+          "monetary_policy": 1.0,
+          "employment": 1.0,
+          "growth": 1.0,
+          "geopolitical": 1.0,
+          "financial": 0.0,
+          "economic": 0.0,
+          "neutral": 0.0,
+          "mixed": 1.0,
+          "uncertainty": 1.0,
+          "technical": 0.5,
+          "complex": 1.0
+        }
+      },
+      "o3": {
+        "accuracy": 0.6666666666666666,
+        "avg_confidence": 0.7547639803168713,
+        "avg_cost": 0.14999999999999997,
+        "avg_response_time": 2677.2323189042177,
+        "total_cost": 1.7999999999999996,
+        "cost_efficiency": 0.3703703703703704,
+        "time_efficiency": 0.2490133792122796,
+        "category_breakdown": {
+          "monetary_policy": 1.0,
+          "employment": 1.0,
+          "growth": 1.0,
+          "geopolitical": 0.0,
+          "financial": 1.0,
+          "economic": 1.0,
+          "neutral": 0.0,
+          "mixed": 1.0,
+          "uncertainty": 0.0,
+          "technical": 1.0,
+          "complex": 0.0
+        }
+      }
+    },
+    "best_model": "o3-mini",
+    "best_score": 0.40330047345246534,
+    "statistical_summary": {
+      "total_comparisons": 12,
+      "total_cost": 3.5999999999999996,
+      "avg_accuracy_across_models": 0.6041666666666666
+    }
+  }
+}
