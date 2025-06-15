@@ -41,7 +41,15 @@
       "Bash(mv:*)",
       "Bash(tree:*)",
       "Bash(sed:*)",
-      "Bash(git tag:*)"
+      "Bash(git tag:*)",
+      "Bash(poetry --version)",
+      "Bash(export:*)",
+      "Bash(poetry install:*)",
+      "Bash(poetry run python:*)",
+      "Bash(touch:*)",
+      "Bash(poetry lock:*)",
+      "Bash(poetry run pytest:*)",
+      "Bash(git commit:*)"
     ],
     "deny": []
   }
