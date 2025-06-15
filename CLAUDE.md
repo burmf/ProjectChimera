@@ -258,6 +258,36 @@ Streamlined Processing:
 - **Test-Driven**: Validate each component before integration
 - **Incremental**: Complete one module fully before moving to next
 
+## Claude Code 知見管理システム
+
+このプロジェクトでは以下のファイルで知見を体系的に管理しています：
+
+### `.claude/context.md`
+- プロジェクトの背景、目的、制約条件
+- 技術スタック選定理由  
+- ビジネス要件や技術的制約
+
+### `.claude/project-knowledge.md`
+- 実装パターンや設計決定の知見
+- アーキテクチャの選択理由
+- 避けるべきパターンやアンチパターン
+
+### `.claude/project-improvements.md`
+- 過去の試行錯誤の記録
+- 失敗した実装とその原因
+- 改善プロセスと結果
+
+### `.claude/common-patterns.md`
+- 頻繁に使用するコマンドパターン
+- 定型的な実装テンプレート
+
+### `.claude/debug-log.md`
+- 重要なデバッグ記録
+- 解決に時間を要した問題
+- トラブルシューティング手順
+
+**重要**: 新しい実装や重要な決定を行った際は、該当するファイルを更新してください。
+
 ## Development Commands
 
 ### Docker Setup (Recommended)
