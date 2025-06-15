@@ -1,0 +1,25 @@
+{
+  "timestamp": "2025-06-15T09:49:34.943735",
+  "session_duration_hours": 0.008669425555555554,
+  "performance": {
+    "total_trades": 0,
+    "win_rate": 0,
+    "total_profit": 0,
+    "daily_return": 0,
+    "hourly_rate": 0,
+    "sharpe_ratio": 0,
+    "max_drawdown": 0,
+    "profit_factor": 0
+  },
+  "trading_config": {
+    "pairs": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT"
+    ],
+    "base_leverage": 40,
+    "position_size": 60000,
+    "max_positions": 12
+  },
+  "trade_history": []
+}
