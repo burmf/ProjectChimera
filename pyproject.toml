@@ -76,6 +76,11 @@ docs = [
 chimera = "project_chimera.cli:main"
 chimera-backtest = "project_chimera.cli.backtest:main"
 
+[project.entry-points."chimera.strategies"]
+volatility_breakout = "project_chimera.strategies.vol_breakout:create_vol_breakout_strategy"
+mini_momentum = "project_chimera.strategies.mini_momo:create_mini_momentum_strategy"
+orderbook_mean_reversion = "project_chimera.strategies.ob_revert:create_orderbook_reversion_strategy"
+
 [project.urls]
 Homepage = "https://github.com/ProjectChimera/project-chimera"
 Documentation = "https://github.com/ProjectChimera/project-chimera/blob/main/README.md"
