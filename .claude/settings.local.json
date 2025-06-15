@@ -40,7 +40,8 @@
       "Bash(timeout 20 python3 ultra_trading_bot.py)",
       "Bash(mv:*)",
       "Bash(tree:*)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "Bash(git tag:*)"
     ],
     "deny": []
   }
