@@ -7,8 +7,6 @@ from typing import Dict, List, Optional, Any
 import sys
 import os
 
-# Add core modules to path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core.redis_manager import redis_manager, PRICE_STREAM, NEWS_STREAM, AI_DECISIONS_STREAM, TRADE_SIGNALS_STREAM
 from core.news_stream import news_stream

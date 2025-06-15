@@ -12,8 +12,6 @@ import pandas as pd
 from datetime import datetime
 import logging
 
-# プロジェクトパスを追加
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from core.bitget_rest_client import BitgetRestClient, ScalpingDataCollector
 from core.orderbook_analyzer import OrderbookAnalyzer

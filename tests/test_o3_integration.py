@@ -9,8 +9,6 @@ import os
 import sys
 from dotenv import load_dotenv
 
-# Add current directory to path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from core.ai_manager import run_openai_parallel_inference_async, get_optimal_prompt_for_model
 from core.openai_manager import openai_manager, Priority

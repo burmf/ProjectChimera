@@ -17,9 +17,6 @@ from typing import Dict, List, Optional, Any
 from collections import deque
 import statistics
 
-# Add modules to path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'core'))
 
 # Import all systems
 from core.bitget_futures_client import BitgetFuturesClient

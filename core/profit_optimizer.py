@@ -37,8 +37,6 @@ from enum import Enum
 import sys
 import os
 
-# Add core modules to path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core.ai_orchestrator import DepartmentType
 from core.database_adapter import db_adapter

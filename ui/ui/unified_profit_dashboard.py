@@ -19,8 +19,6 @@ import threading
 import sys
 import os
 
-# Add modules to path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # Import all systems
 from systems.master_profit_system import MasterProfitSystem

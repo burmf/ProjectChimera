@@ -8,8 +8,6 @@ import json
 from typing import Dict, Any
 import traceback
 
-# Add core modules to path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core.redis_manager import redis_manager
 
 class RedisHandler(logging.Handler):

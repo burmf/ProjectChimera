@@ -17,8 +17,6 @@ import statistics
 import threading
 import signal
 
-# Add core modules to path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from core.bitget_futures_client import BitgetFuturesClient
 

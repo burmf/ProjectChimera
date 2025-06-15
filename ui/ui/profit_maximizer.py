@@ -22,8 +22,6 @@ import os
 import random
 import statistics
 
-# Add core modules to path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # Import our systems
 from core.bitget_futures_client import BitgetFuturesClient

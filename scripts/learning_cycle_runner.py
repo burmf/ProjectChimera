@@ -21,8 +21,6 @@ import sys
 import os
 from pathlib import Path
 
-# プロジェクトルートを追加
-sys.path.append(str(Path(__file__).parent.parent))
 
 from core.backtest_learning_engine import backtest_learning_engine
 from core.database_adapter import database_adapter

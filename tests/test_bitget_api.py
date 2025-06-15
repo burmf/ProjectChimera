@@ -8,7 +8,6 @@ import sys
 import time
 from datetime import datetime, timedelta
 
-sys.path.append('/home/ec2-user/ProjectChimera')
 
 print('🚀 Bitget API Live Testing - Available Functions')
 

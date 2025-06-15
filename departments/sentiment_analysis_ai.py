@@ -14,8 +14,6 @@ import os
 from collections import Counter
 import math
 
-# Add core modules to path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core.ai_agent_base import AIAgentBase, DepartmentType, AnalysisRequest, AnalysisResult
 from core.department_prompts import DepartmentPrompts, PromptFormatter

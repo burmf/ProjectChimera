@@ -8,8 +8,6 @@ from typing import Dict, List, Any, Optional
 import sys
 import os
 
-# Add core modules to path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core.redis_manager import redis_manager
 from core.database_adapter import db_adapter
 from core.logging_config import get_trading_logger

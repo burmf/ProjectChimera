@@ -13,8 +13,6 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Dict, List, Any
 
-# Add core modules to path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from core.ab_test_manager import (
     ab_test_manager, TestConfiguration, ModelType, TestStatus

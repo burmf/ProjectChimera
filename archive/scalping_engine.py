@@ -16,8 +16,6 @@ from collections import deque
 import requests
 import statistics
 
-# Add core modules to path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 logging.basicConfig(
     level=logging.INFO,

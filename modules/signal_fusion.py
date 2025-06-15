@@ -12,8 +12,6 @@ import datetime
 import sys
 import os
 
-# Add core modules to path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core.redis_manager import redis_manager
 
 # ULTRA ALPHA INTEGRATION

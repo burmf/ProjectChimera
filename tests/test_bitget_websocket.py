@@ -9,8 +9,6 @@ import sys
 import os
 from datetime import datetime
 
-# プロジェクトのルートディレクトリをパスに追加
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from core.bitget_websocket import BitgetWebSocketClient, BitgetDataProcessor
 from core.database_adapter import DatabaseAdapter

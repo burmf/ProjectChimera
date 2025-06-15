@@ -12,8 +12,6 @@ import os
 from datetime import datetime, timedelta
 from typing import Dict, Any
 
-# Add core modules to path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from core.ai_orchestrator import AIOrchestrator, MarketSituation, DecisionType
 from core.ai_agent_base import DepartmentType, AnalysisPriority

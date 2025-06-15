@@ -14,8 +14,6 @@ except ImportError:
     HAS_TALIB = False
     logging.warning("TA-Lib not available, using manual calculations")
 
-# Add core modules to path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core.redis_manager import redis_manager
 
 logger = logging.getLogger(__name__)

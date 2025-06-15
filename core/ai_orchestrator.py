@@ -15,8 +15,6 @@ from enum import Enum
 import sys
 import os
 
-# Add core modules to path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core.ai_agent_base import (
     AIAgentBase, DepartmentType, AnalysisRequest, AnalysisResult, AnalysisPriority

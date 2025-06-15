@@ -12,8 +12,6 @@ import os
 from datetime import datetime
 from typing import Dict, Any
 
-# Add core modules to path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from core.profit_optimizer import profit_optimizer
 

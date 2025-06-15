@@ -6,8 +6,6 @@ import os
 import logging
 import datetime
 
-# Add parent directory to path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core.logging_config import setup_logging, get_trading_logger
 from core.risk_manager import risk_manager

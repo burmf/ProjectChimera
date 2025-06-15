@@ -4,7 +4,6 @@ ProjectChimera + Bitget API Integration Test
 """
 
 import sys
-sys.path.append('/home/ec2-user/ProjectChimera')
 
 print('🎯 ProjectChimera + Bitget API Integration Test')
 

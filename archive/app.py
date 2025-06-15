@@ -12,8 +12,6 @@ import logging
 import sys
 import os
 
-# Add current directory to path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from core.logging_config import setup_logging
 from core.database_adapter import db_adapter

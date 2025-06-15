@@ -10,8 +10,6 @@ import pandas as pd
 import datetime
 from sqlalchemy import create_engine, text
 
-# Add project path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from core.temporal_backtester import run_temporal_backtest
 from core.temporal_validator import create_temporal_validator

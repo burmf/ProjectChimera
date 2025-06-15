@@ -20,8 +20,6 @@ import threading
 import sys
 import os
 
-# Add core modules to path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # Page config
 st.set_page_config(

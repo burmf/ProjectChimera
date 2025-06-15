@@ -10,10 +10,6 @@ import subprocess
 import time
 from datetime import datetime
 
-# Add core modules to path
-sys.path.append(os.path.join(os.path.dirname(__file__), 'core'))
-sys.path.append(os.path.join(os.path.dirname(__file__), 'systems'))
-sys.path.append(os.path.join(os.path.dirname(__file__), 'ui'))
 
 def print_banner():
     """起動バナー"""
