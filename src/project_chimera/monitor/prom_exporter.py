@@ -1,0 +1,518 @@
+"""
+Prometheus Metrics Exporter - Phase G Implementation
+Exports trading system metrics on port 9100
+Metrics: pnl_total, slippage_ms, dd_pct, ws_latency
+"""
+
+import time
+import threading
+import logging
+from datetime import datetime, timedelta
+from typing import Dict, Any, Optional, List
+from dataclasses import dataclass
+from http.server import HTTPServer, BaseHTTPRequestHandler
+import json
+import random
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class MetricValue:
+    """Individual metric value with timestamp"""
+    value: float
+    timestamp: datetime
+    labels: Dict[str, str]
+
+
+class PrometheusMetric:
+    """Prometheus metric with automatic formatting"""
+    
+    def __init__(self, name: str, metric_type: str, help_text: str):
+        self.name = name
+        self.metric_type = metric_type  # 'counter', 'gauge', 'histogram'
+        self.help_text = help_text
+        self.values: Dict[str, MetricValue] = {}
+    
+    def set(self, value: float, labels: Optional[Dict[str, str]] = None):
+        """Set metric value with optional labels"""
+        labels = labels or {}
+        key = self._label_key(labels)
+        self.values[key] = MetricValue(value, datetime.now(), labels)
+    
+    def inc(self, amount: float = 1.0, labels: Optional[Dict[str, str]] = None):
+        """Increment counter metric"""
+        labels = labels or {}
+        key = self._label_key(labels)
+        
+        if key in self.values:
+            current_value = self.values[key].value
+        else:
+            current_value = 0.0
+        
+        self.values[key] = MetricValue(current_value + amount, datetime.now(), labels)
+    
+    def _label_key(self, labels: Dict[str, str]) -> str:
+        """Generate key from labels"""
+        if not labels:
+            return ""
+        return ",".join(f"{k}={v}" for k, v in sorted(labels.items()))
+    
+    def to_prometheus_format(self) -> str:
+        """Convert to Prometheus exposition format"""
+        lines = []
+        
+        # Add HELP and TYPE
+        lines.append(f"# HELP {self.name} {self.help_text}")
+        lines.append(f"# TYPE {self.name} {self.metric_type}")
+        
+        # Add metric values
+        for key, metric_value in self.values.items():
+            labels_str = ""
+            if metric_value.labels:
+                label_pairs = [f'{k}="{v}"' for k, v in metric_value.labels.items()]
+                labels_str = "{" + ",".join(label_pairs) + "}"
+            
+            lines.append(f"{self.name}{labels_str} {metric_value.value}")
+        
+        return "\n".join(lines)
+
+
+class TradingMetricsCollector:
+    """Collects and manages trading system metrics"""
+    
+    def __init__(self):
+        self.metrics: Dict[str, PrometheusMetric] = {}
+        self._init_metrics()
+        
+        # Simulation state
+        self.start_time = datetime.now()
+        self.simulation_running = False
+        self.simulation_thread = None
+        
+        # Trading state
+        self.current_equity = 100000.0
+        self.peak_equity = 100000.0
+        self.total_orders = 0
+        self.filled_orders = 0
+        self.ws_connected = True
+        
+    def _init_metrics(self):
+        """Initialize all trading metrics"""
+        # Core trading metrics
+        self.metrics['pnl_total'] = PrometheusMetric(
+            'chimera_pnl_total_usd',
+            'gauge',
+            'Total P&L in USD'
+        )
+        
+        self.metrics['slippage_ms'] = PrometheusMetric(
+            'chimera_slippage_milliseconds',
+            'gauge',
+            'Order execution slippage in milliseconds'
+        )
+        
+        self.metrics['dd_pct'] = PrometheusMetric(
+            'chimera_drawdown_percent',
+            'gauge',
+            'Current drawdown percentage'
+        )
+        
+        self.metrics['ws_latency'] = PrometheusMetric(
+            'chimera_websocket_latency_ms',
+            'gauge',
+            'WebSocket round-trip latency in milliseconds'
+        )
+        
+        # Additional system metrics
+        self.metrics['orders_total'] = PrometheusMetric(
+            'chimera_orders_total',
+            'counter',
+            'Total number of orders placed'
+        )
+        
+        self.metrics['orders_filled'] = PrometheusMetric(
+            'chimera_orders_filled_total',
+            'counter',
+            'Total number of orders filled'
+        )
+        
+        self.metrics['equity_value'] = PrometheusMetric(
+            'chimera_equity_value_usd',
+            'gauge',
+            'Current portfolio equity value in USD'
+        )
+        
+        self.metrics['system_uptime'] = PrometheusMetric(
+            'chimera_system_uptime_seconds',
+            'gauge',
+            'System uptime in seconds'
+        )
+        
+        self.metrics['strategy_signals'] = PrometheusMetric(
+            'chimera_strategy_signals_total',
+            'counter',
+            'Number of signals generated by strategy'
+        )
+        
+        self.metrics['risk_rejections'] = PrometheusMetric(
+            'chimera_risk_rejections_total',
+            'counter',
+            'Number of signals rejected by risk management'
+        )
+        
+        self.metrics['circuit_breaker_state'] = PrometheusMetric(
+            'chimera_circuit_breaker_open',
+            'gauge',
+            'Circuit breaker state (1=open, 0=closed)'
+        )
+        
+        self.metrics['api_errors'] = PrometheusMetric(
+            'chimera_api_errors_total',
+            'counter',
+            'Total API errors encountered'
+        )
+        
+        self.metrics['ws_disconnections'] = PrometheusMetric(
+            'chimera_websocket_disconnections_total',
+            'counter',
+            'Total WebSocket disconnections'
+        )
+    
+    def update_pnl(self, pnl_usd: float):
+        """Update P&L metric"""
+        self.metrics['pnl_total'].set(pnl_usd)
+        
+        # Update equity
+        new_equity = 100000.0 + pnl_usd
+        self.current_equity = new_equity
+        self.metrics['equity_value'].set(new_equity)
+        
+        # Track peak and drawdown
+        if new_equity > self.peak_equity:
+            self.peak_equity = new_equity
+        
+        drawdown = (self.peak_equity - new_equity) / self.peak_equity * 100
+        self.metrics['dd_pct'].set(drawdown)
+    
+    def update_slippage(self, slippage_ms: float, symbol: str = "BTCUSDT"):
+        """Update slippage metric"""
+        self.metrics['slippage_ms'].set(slippage_ms, {'symbol': symbol})
+    
+    def update_ws_latency(self, latency_ms: float, exchange: str = "bitget"):
+        """Update WebSocket latency"""
+        self.metrics['ws_latency'].set(latency_ms, {'exchange': exchange})
+    
+    def record_order(self, symbol: str, side: str):
+        """Record order placement"""
+        self.total_orders += 1
+        self.metrics['orders_total'].inc(labels={'symbol': symbol, 'side': side})
+    
+    def record_fill(self, symbol: str, side: str):
+        """Record order fill"""
+        self.filled_orders += 1
+        self.metrics['orders_filled'].inc(labels={'symbol': symbol, 'side': side})
+    
+    def record_signal(self, strategy: str, symbol: str):
+        """Record strategy signal"""
+        self.metrics['strategy_signals'].inc(labels={'strategy': strategy, 'symbol': symbol})
+    
+    def record_risk_rejection(self, reason: str):
+        """Record risk rejection"""
+        self.metrics['risk_rejections'].inc(labels={'reason': reason})
+    
+    def update_circuit_breaker(self, is_open: bool, component: str):
+        """Update circuit breaker state"""
+        state_value = 1.0 if is_open else 0.0
+        self.metrics['circuit_breaker_state'].set(state_value, {'component': component})
+    
+    def record_api_error(self, endpoint: str, error_type: str):
+        """Record API error"""
+        self.metrics['api_errors'].inc(labels={'endpoint': endpoint, 'error_type': error_type})
+    
+    def record_ws_disconnection(self, exchange: str):
+        """Record WebSocket disconnection"""
+        self.metrics['ws_disconnections'].inc(labels={'exchange': exchange})
+    
+    def update_system_metrics(self):
+        """Update general system metrics"""
+        uptime = (datetime.now() - self.start_time).total_seconds()
+        self.metrics['system_uptime'].set(uptime)
+    
+    def get_all_metrics(self) -> str:
+        """Get all metrics in Prometheus format"""
+        self.update_system_metrics()
+        
+        lines = []
+        for metric in self.metrics.values():
+            lines.append(metric.to_prometheus_format())
+        
+        return "\n\n".join(lines) + "\n"
+    
+    def start_simulation(self):
+        """Start metric simulation"""
+        if self.simulation_running:
+            return
+        
+        self.simulation_running = True
+        self.simulation_thread = threading.Thread(target=self._simulation_loop)
+        self.simulation_thread.daemon = True
+        self.simulation_thread.start()
+        logger.info("Started metrics simulation")
+    
+    def stop_simulation(self):
+        """Stop metric simulation"""
+        self.simulation_running = False
+        if self.simulation_thread:
+            self.simulation_thread.join(timeout=1.0)
+        logger.info("Stopped metrics simulation")
+    
+    def _simulation_loop(self):
+        """Simulate realistic trading metrics"""
+        while self.simulation_running:
+            try:
+                # Simulate trading activity
+                
+                # Random P&L updates
+                if random.random() < 0.3:  # 30% chance
+                    pnl_change = random.gauss(0, 500)  # $500 std dev
+                    current_pnl = self.current_equity - 100000.0
+                    new_pnl = current_pnl + pnl_change
+                    self.update_pnl(new_pnl)
+                
+                # Random slippage
+                if random.random() < 0.2:  # 20% chance
+                    slippage = random.uniform(5, 50)  # 5-50ms
+                    symbol = random.choice(['BTCUSDT', 'ETHUSDT', 'SOLUSDT'])
+                    self.update_slippage(slippage, symbol)
+                
+                # Random WebSocket latency
+                if random.random() < 0.4:  # 40% chance
+                    latency = random.uniform(10, 100)  # 10-100ms
+                    self.update_ws_latency(latency)
+                
+                # Random orders
+                if random.random() < 0.1:  # 10% chance
+                    symbol = random.choice(['BTCUSDT', 'ETHUSDT', 'SOLUSDT'])
+                    side = random.choice(['buy', 'sell'])
+                    self.record_order(symbol, side)
+                    
+                    # Sometimes fill the order
+                    if random.random() < 0.8:  # 80% fill rate
+                        self.record_fill(symbol, side)
+                
+                # Random strategy signals
+                if random.random() < 0.15:  # 15% chance
+                    strategy = random.choice(['momentum', 'mean_reversion', 'breakout'])
+                    symbol = random.choice(['BTCUSDT', 'ETHUSDT'])
+                    self.record_signal(strategy, symbol)
+                
+                # Occasional risk rejections
+                if random.random() < 0.05:  # 5% chance
+                    reason = random.choice(['position_limit', 'drawdown_limit', 'correlation_limit'])
+                    self.record_risk_rejection(reason)
+                
+                # Occasional API errors
+                if random.random() < 0.02:  # 2% chance
+                    endpoint = random.choice(['/orders', '/account', '/positions'])
+                    error_type = random.choice(['timeout', 'rate_limit', 'server_error'])
+                    self.record_api_error(endpoint, error_type)
+                
+                # Circuit breaker updates
+                if random.random() < 0.05:  # 5% chance
+                    component = random.choice(['api', 'websocket', 'database'])
+                    is_open = random.random() < 0.1  # 10% chance of being open
+                    self.update_circuit_breaker(is_open, component)
+                
+                time.sleep(2)  # Update every 2 seconds
+                
+            except Exception as e:
+                logger.error(f"Error in simulation loop: {e}")
+                time.sleep(5)
+
+
+class PrometheusHandler(BaseHTTPRequestHandler):
+    """HTTP handler for Prometheus metrics endpoint"""
+    
+    def __init__(self, metrics_collector: TradingMetricsCollector, *args, **kwargs):
+        self.metrics_collector = metrics_collector
+        super().__init__(*args, **kwargs)
+    
+    def do_GET(self):
+        """Handle GET requests"""
+        if self.path == '/metrics':
+            # Return Prometheus metrics
+            metrics_text = self.metrics_collector.get_all_metrics()
+            
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/plain; version=0.0.4')
+            self.send_header('Content-Length', str(len(metrics_text)))
+            self.end_headers()
+            
+            self.wfile.write(metrics_text.encode('utf-8'))
+            
+        elif self.path == '/':
+            # Simple info page
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/html')
+            self.end_headers()
+            
+            html = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Project Chimera - Prometheus Exporter</title>
+                <style>body {{ font-family: Arial; margin: 40px; }}</style>
+            </head>
+            <body>
+                <h1>🔍 Project Chimera - Prometheus Metrics Exporter</h1>
+                <p><strong>Status:</strong> Running</p>
+                <p><strong>Port:</strong> {self.server.server_port}</p>
+                <p><strong>Metrics Endpoint:</strong> <a href="/metrics">/metrics</a></p>
+                
+                <h2>Available Metrics:</h2>
+                <ul>
+                    <li><code>chimera_pnl_total_usd</code> - Total P&L in USD</li>
+                    <li><code>chimera_slippage_milliseconds</code> - Order slippage</li>
+                    <li><code>chimera_drawdown_percent</code> - Current drawdown</li>
+                    <li><code>chimera_websocket_latency_ms</code> - WebSocket latency</li>
+                    <li><code>chimera_orders_total</code> - Total orders placed</li>
+                    <li><code>chimera_orders_filled_total</code> - Total orders filled</li>
+                    <li><code>chimera_equity_value_usd</code> - Portfolio equity</li>
+                    <li><code>chimera_system_uptime_seconds</code> - System uptime</li>
+                </ul>
+                
+                <p><em>Phase G Implementation - Prometheus metrics on port 9100</em></p>
+            </body>
+            </html>
+            """
+            
+            self.wfile.write(html.encode('utf-8'))
+        
+        else:
+            self.send_response(404)
+            self.end_headers()
+            self.wfile.write(b'Not Found')
+    
+    def log_message(self, format, *args):
+        """Override to reduce log noise"""
+        pass
+
+
+def create_handler(metrics_collector):
+    """Create handler with metrics collector"""
+    def handler(*args, **kwargs):
+        return PrometheusHandler(metrics_collector, *args, **kwargs)
+    return handler
+
+
+class PrometheusExporter:
+    """Prometheus metrics exporter server"""
+    
+    def __init__(self, port: int = 9100):
+        self.port = port
+        self.metrics_collector = TradingMetricsCollector()
+        self.server = None
+        self.server_thread = None
+        self.running = False
+    
+    def start(self, simulate: bool = True):
+        """Start the Prometheus exporter"""
+        logger.info(f"Starting Prometheus exporter on port {self.port}")
+        
+        handler = create_handler(self.metrics_collector)
+        self.server = HTTPServer(('0.0.0.0', self.port), handler)
+        
+        # Run server in separate thread
+        self.server_thread = threading.Thread(target=self.server.serve_forever)
+        self.server_thread.daemon = True
+        self.server_thread.start()
+        
+        # Start metrics simulation
+        if simulate:
+            self.metrics_collector.start_simulation()
+        
+        self.running = True
+        logger.info(f"Prometheus exporter running on http://localhost:{self.port}/metrics")
+    
+    def stop(self):
+        """Stop the exporter"""
+        if self.running:
+            logger.info("Stopping Prometheus exporter")
+            
+            self.metrics_collector.stop_simulation()
+            
+            if self.server:
+                self.server.shutdown()
+                self.server.server_close()
+            
+            self.running = False
+    
+    def is_running(self) -> bool:
+        """Check if exporter is running"""
+        return self.running
+    
+    def get_metrics(self) -> str:
+        """Get current metrics"""
+        return self.metrics_collector.get_all_metrics()
+
+
+def main():
+    """Main entry point"""
+    import argparse
+    import signal
+    
+    parser = argparse.ArgumentParser(description="Prometheus Metrics Exporter")
+    parser.add_argument('--port', type=int, default=9100, help='Exporter port')
+    parser.add_argument('--no-simulate', action='store_true', help='Disable metrics simulation')
+    
+    args = parser.parse_args()
+    
+    # Create exporter
+    exporter = PrometheusExporter(args.port)
+    
+    # Setup signal handlers
+    def signal_handler(signum, frame):
+        logger.info("Received shutdown signal")
+        exporter.stop()
+        exit(0)
+    
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+    
+    try:
+        exporter.start(simulate=not args.no_simulate)
+        
+        print(f"""
+🔍 Project Chimera Prometheus Exporter Started!
+
+📊 Metrics: http://localhost:{args.port}/metrics
+🌐 Info: http://localhost:{args.port}/
+
+Example Grafana queries:
+- chimera_pnl_total_usd
+- rate(chimera_orders_total[5m])
+- chimera_drawdown_percent
+- chimera_websocket_latency_ms
+
+Press Ctrl+C to stop
+        """)
+        
+        # Keep running
+        while exporter.is_running():
+            time.sleep(1)
+    
+    except KeyboardInterrupt:
+        logger.info("Received keyboard interrupt")
+    except Exception as e:
+        logger.error(f"Exporter error: {e}")
+    finally:
+        exporter.stop()
+    
+    return 0
+
+
+if __name__ == '__main__':
+    exit(main())
