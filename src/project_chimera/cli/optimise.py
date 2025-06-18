@@ -33,7 +33,10 @@ except ImportError:
     JOBLIB_AVAILABLE = False
 
 # Import our backtesting engine
-from .backtest import VectorizedBacktester, MarketData, BacktestConfig, BacktestResult, StrategyType
+try:
+    from .backtest import VectorizedBacktester, MarketData, BacktestConfig, BacktestResult, StrategyType
+except ImportError:
+    from project_chimera.cli.backtest import VectorizedBacktester, MarketData, BacktestConfig, BacktestResult, StrategyType
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

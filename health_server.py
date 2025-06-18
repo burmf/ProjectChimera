@@ -24,11 +24,11 @@ class HealthStatus:
     def __init__(self):
         self.start_time = datetime.now()
         self.components = {
-            'orchestrator': {'status': 'running', 'last_check': datetime.now()},
-            'data_feed': {'status': 'running', 'last_check': datetime.now()},
-            'strategy_hub': {'status': 'running', 'last_check': datetime.now()},
-            'risk_engine': {'status': 'running', 'last_check': datetime.now()},
-            'execution_engine': {'status': 'running', 'last_check': datetime.now()},
+            'orchestrator': {'status': 'running', 'last_check': datetime.now().isoformat()},
+            'data_feed': {'status': 'running', 'last_check': datetime.now().isoformat()},
+            'strategy_hub': {'status': 'running', 'last_check': datetime.now().isoformat()},
+            'risk_engine': {'status': 'running', 'last_check': datetime.now().isoformat()},
+            'execution_engine': {'status': 'running', 'last_check': datetime.now().isoformat()},
             'circuit_breaker': {'status': 'closed', 'failures': 0}
         }
         self.metrics = {

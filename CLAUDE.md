@@ -555,3 +555,159 @@ print(f"Confidence: {decision.consensus_confidence:.3f}")
 5. **透明性**: 各部門の判断根拠が明確
 
 このAI部門システムにより、ProjectChimeraは従来の単一AIモデルを超えた、より洗練された投資判断システムを実現しています。
+
+# Project Chimera – Claude‑Code Development Reference
+
+> *This markdown is a living spec & crib‑sheet for anyone (or any agent) contributing code to the Bitget‑only alpha‑stack.*
+
+---
+
+## 0. Purpose
+
+Provide **one authoritative page** that Claude‑Code (or other LLM‑agents) can ingest in a single prompt to know:
+
+* What we’re building and why
+* Which modules already exist vs. still missing
+* Coding, testing, and deployment conventions
+
+---
+
+## 1. Top‑Level Goal
+
+**Turn a 150 k JPY account into a compounding, risk‑capped trading bot** by stacking seven short‑term alpha strategies on Bitget and automating everything from datafeed to monitoring.
+
+---
+
+## 2. Canonical References
+
+| Doc / Repo                              | Why it matters                       |
+| --------------------------------------- | ------------------------------------ |
+| `github.com/burmf/ProjectChimera`       | Main codebase (current prototype)    |
+| This `claude.md`                        | Master spec for Claude‑Code          |
+| Phase plan B→G block (2025‑06‑18)       | Road‑map tasks & acceptance criteria |
+| Strategy Catalog table (seven ⭐ strats) | Exact trading logic to implement     |
+| Risk‑Engine spec (Dyn‑Kelly/ATR/DD)     | Capital protection rules             |
+
+---
+
+## 3. Architecture Snapshot
+
+```mermaid
+graph TD
+  WS[Bitget WebSocket] --> Hub(StrategyHub)
+  Rest[Bitget REST] --> Hub
+  Hub --> Risk(RiskEngine)
+  Risk --> Exec(Execution REST)
+  Exec --> Logger
+  Logger -->|pnl_total| Prom
+  UI(Streamlit) -->|control| Hub
+```
+
+---
+
+## 4. Phase D → G Checklist (abbr.)
+
+1. **D – Risk & Leverage**
+   `risk/dyn_kelly.py`, `atr_target.py`, `dd_guard.py`
+2. **E – Optimiser / Backtest CLI**
+   `cli/backtest.py`, `cli/optimise.py` (Optuna 50 trials)
+3. **F – Live Orchestrator**
+   `orchestrator.py`, circuit‑breaker, health endpoint
+4. **G – Monitoring & Dashboard**
+   Prometheus exporter, Grafana JSON, Streamlit control
+
+---
+
+## 5. Strategy Modules (MVP 7)
+
+| File                | Alias        | Core trigger                       |
+| ------------------- | ------------ | ---------------------------------- |
+| `weekend_effect.py` | WKND\_EFF    | Fri 23:00 UTC buy → Mon 01:00 sell |
+| `stop_rev.py`       | STOP\_REV    |  5 m −3 % & vol ×3 → long rebound  |
+| `fund_contra.py`    | FUND\_CONTRA |  Funding ±0.03 % & OI spike        |
+| `lob_revert.py`     | LOB\_REV     |  Order‑flow RSI >70/<30            |
+| `vol_breakout.py`   | VOL\_BRK     |  BB squeeze & ±2 % breakout        |
+| `cme_gap.py`        | CME\_GAP     |  Weekend futures gap fill          |
+| `basis_arb.py`      | BASIS\_ARB   |  Spot ↔ Perp premium > 0.5 %       |
+
+*Each exposes* `generate(frame)->Signal`  *and* `on_fill()`
+
+---
+
+## 6. Risk‑Engine Rules
+
+```text
+size_nominal = equity * kelly_frac * target_vol/ATR
+if DD ≥10% ⇒ size×0.5
+if DD ≥20% ⇒ flat & pause 24h
+```
+
+Default: `kelly_frac=0.5`, `target_vol=1%/day`.
+
+---
+
+## 7. Data Sources
+
+* WS Channels: `books`, `trade`, `ticker`, `fundingRate`, `account` (OI)
+* REST Endpoints: candles 1m, funding‑history, open‑interest
+
+---
+
+## 8. Coding Guidelines
+
+* **AsyncIO everywhere** (`httpx.AsyncClient`, `websockets`).
+* Use *dependency‑injector* for all singletons (feed, http).
+* Follow `ruff`, `black`, `isort`. CI fails on style error.
+
+---
+
+## 9. Testing & CI
+
+* PyTest + `pytest‑httpx` mocks.
+* Target coverage ≥ 60 %; enforced in GH Actions.
+
+---
+
+## 10. Docker / Ops
+
+* Multi‑stage Dockerfile → final image < 100 MB.
+* `HEALTHCHECK curl localhost:8000/health`.
+* `docker-compose up` spins: bot, redis, postgres, prom, grafana.
+
+---
+
+## 11. Open TODOs
+
+* [ ] Finish `bitget_ws.py` latency-safe implementation.
+* [ ] Implement **WKND\_EFF, STOP\_REV, FUND\_CONTRA** first.
+* [ ] Integrate Dyn-Kelly & DD guard in live loop.
+* [ ] Add prom metric `ws_latency_ms`.
+* [ ] Write e2e smoke test (`tests/e2e_demo.py`).
+
+---
+
+## 12. Design Philosophy — *For a First‑Year Engineer*
+
+> *Guiding principles so even a brand‑new coder can navigate the codebase with confidence.*
+
+1. **Single‑Responsibility Modules**
+   Each file should *do one thing well*: feed, strategy, risk, or execution. Fewer imports = easier mental model.
+2. **Fail‑Fast, Safe‑Fail**
+   Catch exceptions at the boundary (API calls) and let async tasks crash‑restart; never swallow errors silently.
+3. **Async‑First Thinking**
+   ‑ Prefer `await httpx` / `async for ws` over blocking loops.
+   ‑ CPU‑light → I/O‑bound, so latency is king.
+4. **Config over Code**
+   Numbers (thresholds, keys) live in `settings.yaml`. Changing behaviour should never need a code edit.
+5. **Test Small, Test Often**
+   For every new function, add a pytest. Aim: *red → green → refactor*. Coverage is a safety net.
+6. **Log Everything Important**
+   JSON logs with `ts, level, event, pair, pnl` so Grafana can graph any metric later.
+7. **Risk First, Profit Second**
+   If DD guard fires, strategy *must* shrink/stop. Protect equity; compounding only works when survival > 0.
+8. **Readability > Cleverness**
+   Choose clarity over micro‑optimisation. Future‑you (and AI reviewers) will thank you.
+
+> **TL;DR**: *Small pieces, clear contracts, observable behaviour, and safety rails—then add alpha.*
+
+---
