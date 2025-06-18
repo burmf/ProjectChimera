@@ -100,7 +100,7 @@ jobs:
           BITGET_SECRET_KEY: test_secret
           BITGET_PASSPHRASE: test_passphrase
         run: |
-          pytest tests/ -v --cov=project_chimera --cov-report=xml --cov-report=term-missing
+          pytest tests/ -v --cov=project_chimera --cov-report=xml --cov-report=term-missing --cov-fail-under=60
           
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3

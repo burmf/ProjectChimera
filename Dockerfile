@@ -1,94 +1,123 @@
-# ProjectChimera Trading Bot - Multi-Stage Docker Build
+# ProjectChimera Trading Bot - Optimized Multi-Stage Docker Build
 # Stage 1: Builder
-FROM python:3.9-slim as builder
+FROM python:3.11-slim as builder
 
 # Install system dependencies for building
 RUN apt-get update && apt-get install -y \
     build-essential \
     curl \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install Poetry
-ENV POETRY_HOME="/opt/poetry"
-ENV POETRY_VERSION=2.1.3
-RUN curl -sSL https://install.python-poetry.org | python3 -
-ENV PATH="$POETRY_HOME/bin:$PATH"
-
-# Configure Poetry
-ENV POETRY_NO_INTERACTION=1 \
-    POETRY_VENV_IN_PROJECT=1 \
-    POETRY_CACHE_DIR=/opt/poetry/.cache \
-    POETRY_HOME=/opt/poetry
+    git \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
 # Set work directory
 WORKDIR /app
 
-# Copy Poetry files
-COPY pyproject.toml poetry.lock ./
+# Copy dependency files first for better caching
+COPY pyproject.toml ./
 
-# Install dependencies
-RUN poetry install --only=main --no-dev && \
-    poetry run pip install --upgrade pip
+# Install dependencies using pip directly (faster than Poetry for production)
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir -e .
 
 # Stage 2: Runtime
-FROM python:3.9-slim as runtime
+FROM python:3.11-slim as runtime
 
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y \
     ca-certificates \
+    curl \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
 # Create non-root user for security
-RUN groupadd -r chimera && useradd -r -g chimera chimera
+RUN groupadd -r chimera && useradd -r -g chimera -m chimera
 
 # Set work directory
 WORKDIR /app
 
-# Copy virtual environment from builder stage
-COPY --from=builder /app/.venv /app/.venv
+# Copy Python packages from builder stage
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
 
-# Copy application code
-COPY project_chimera/ ./project_chimera/
-COPY README.md ./
+# Copy application source code
+COPY src/ ./src/
+COPY README.md LICENSE ./
 
-# Create necessary directories
+# Create necessary directories and set permissions
 RUN mkdir -p /app/data /app/logs /app/config && \
     chown -R chimera:chimera /app
 
-# Set Python path
-ENV PATH="/app/.venv/bin:$PATH"
-ENV PYTHONPATH="/app"
+# Set environment variables
+ENV PYTHONPATH="/app/src"
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD python -c "import project_chimera; print('✅ Health check passed')" || exit 1
+    CMD python -c "from src.project_chimera.orchestrator import TradingOrchestrator; print('✅ Health check passed')" || exit 1
 
 # Switch to non-root user
 USER chimera
 
-# Expose port for monitoring/API
-EXPOSE 8000
+# Expose ports for monitoring and health checks
+EXPOSE 8000 8001
 
 # Default command
-CMD ["python", "-m", "project_chimera.systems.master_trading_system"]
+CMD ["python", "-m", "src.project_chimera.orchestrator"]
 
-# Development stage
-FROM runtime as development
-
-USER root
+# Stage 3: Development
+FROM builder as development
 
 # Install development dependencies
-COPY --from=builder /app/.venv /app/.venv
-RUN /app/.venv/bin/pip install pytest pytest-cov black ruff mypy
+COPY pyproject.toml ./
+RUN pip install --no-cache-dir -e ".[dev,test]"
 
 # Install development tools
 RUN apt-get update && apt-get install -y \
     git \
     vim \
-    && rm -rf /var/lib/apt/lists/*
+    nano \
+    htop \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Copy all source code for development
+COPY . .
+
+# Create non-root user for development
+RUN groupadd -r chimera && useradd -r -g chimera -m chimera && \
+    chown -R chimera:chimera /app
 
 USER chimera
 
-# Development command
-CMD ["python", "-m", "project_chimera.systems.master_trading_system", "--debug"]
+# Set environment variables for development
+ENV PYTHONPATH="/app/src"
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV ENV=development
+
+# Expose ports for debugging and development servers
+EXPOSE 8000 8001 8501 8888
+
+# Development command with auto-reload
+CMD ["python", "-m", "src.project_chimera.orchestrator", "--verbose"]
+
+# Stage 4: Testing
+FROM development as testing
+
+# Run tests during build (optional)
+USER root
+RUN pip install --no-cache-dir pytest pytest-asyncio pytest-httpx pytest-cov
+
+USER chimera
+
+# Copy test configuration
+COPY tests/ ./tests/
+COPY pyproject.toml ./
+
+# Set test environment
+ENV ENV=test
+
+# Default test command
+CMD ["pytest", "tests/", "-v", "--cov=src/project_chimera", "--cov-report=html", "--cov-report=term-missing"]

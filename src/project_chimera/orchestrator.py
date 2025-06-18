@@ -15,6 +15,12 @@ from enum import Enum
 import traceback
 from contextlib import asynccontextmanager
 
+from .settings import get_settings
+from .datafeed.adapters.bitget_enhanced import BitgetEnhancedAdapter
+from .risk.unified_engine import UnifiedRiskEngine, UnifiedRiskConfig
+from .execution.bitget import BitgetExecutionClient
+from .domains.market import Ticker, OrderBook, Signal
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -252,70 +258,132 @@ class AsyncPipelineComponent:
         }
 
 
-class DataFeed(AsyncPipelineComponent):
-    """Market data feed component"""
+class BitgetDataFeed(AsyncPipelineComponent):
+    """Real Bitget market data feed component"""
     
     def __init__(self, symbols: List[str]):
-        super().__init__("DataFeed")
+        super().__init__("BitgetDataFeed")
         self.symbols = symbols
         self.subscribers = []
-        self.feed_task = None
+        self.settings = get_settings()
+        
+        # Initialize Bitget adapter
+        bitget_config = {
+            'api_key': self.settings.api.bitget_key.get_secret_value(),
+            'secret_key': self.settings.api.bitget_secret.get_secret_value(),
+            'passphrase': self.settings.api.bitget_passphrase.get_secret_value(),
+            'sandbox': self.settings.api.bitget_sandbox,
+            'timeout_seconds': self.settings.api.timeout_seconds
+        }
+        
+        self.adapter = BitgetEnhancedAdapter("bitget_main", bitget_config)
+        self.last_data = {}
     
     async def _start_impl(self):
-        """Start the data feed"""
-        self.feed_task = asyncio.create_task(self._feed_loop())
+        """Start the Bitget data feed"""
+        try:
+            # Connect to Bitget
+            await self.adapter.connect()
+            
+            # Subscribe to all symbols
+            for symbol in self.symbols:
+                await self.adapter.subscribe_ticker(symbol)
+                await self.adapter.subscribe_orderbook(symbol, levels=20)
+                await self.adapter.subscribe_trades(symbol)
+                
+                # For futures, also subscribe to funding rates
+                if "USDT" in symbol or "USDC" in symbol:
+                    await self.adapter.subscribe_funding(symbol)
+                    await self.adapter.subscribe_open_interest(symbol)
+            
+            # Start data processing task
+            self.feed_task = asyncio.create_task(self._process_market_data())
+            
+            logger.info(f"Bitget data feed started for symbols: {self.symbols}")
+            
+        except Exception as e:
+            logger.error(f"Failed to start Bitget data feed: {e}")
+            raise
     
     async def _stop_impl(self):
-        """Stop the data feed"""
-        if self.feed_task:
+        """Stop the Bitget data feed"""
+        if hasattr(self, 'feed_task') and self.feed_task:
             self.feed_task.cancel()
             try:
                 await self.feed_task
             except asyncio.CancelledError:
                 pass
+        
+        if self.adapter:
+            await self.adapter.disconnect()
     
-    async def _feed_loop(self):
-        """Main feed loop"""
+    async def _process_market_data(self):
+        """Process incoming market data from Bitget"""
         while self._running:
             try:
-                # Simulate market data generation
+                # Check for new data from each symbol
                 for symbol in self.symbols:
-                    frame = await self._generate_market_frame(symbol)
-                    
-                    # Send to subscribers
-                    for subscriber in self.subscribers:
-                        try:
-                            await subscriber(frame)
-                        except Exception as e:
-                            logger.error(f"Error sending to subscriber: {e}")
+                    if symbol in self.adapter.market_data:
+                        market_data = self.adapter.market_data[symbol]
+                        
+                        # Create market frame from latest data
+                        if 'ticker' in market_data:
+                            frame = await self._create_market_frame(symbol, market_data)
+                            
+                            # Send to subscribers
+                            for subscriber in self.subscribers:
+                                try:
+                                    await subscriber(frame)
+                                except Exception as e:
+                                    logger.error(f"Error sending to subscriber: {e}")
                 
-                await asyncio.sleep(1.0)  # 1 second interval
+                await asyncio.sleep(0.1)  # 100ms polling interval
                 
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Error in feed loop: {e}")
-                await asyncio.sleep(5.0)  # Retry delay
+                logger.error(f"Error in market data processing: {e}")
+                await asyncio.sleep(1.0)
     
-    async def _generate_market_frame(self, symbol: str) -> MarketFrame:
-        """Generate simulated market data"""
-        import random
+    async def _create_market_frame(self, symbol: str, market_data: Dict) -> MarketFrame:
+        """Create MarketFrame from Bitget market data"""
+        ticker = market_data.get('ticker')
+        orderbook = market_data.get('orderbook')
         
-        # Simple price simulation
-        base_price = 50000.0 if symbol == "BTCUSDT" else 3000.0
-        spread = base_price * 0.0001  # 0.01% spread
+        if not ticker:
+            # Fallback to last known data
+            if symbol in self.last_data:
+                return self.last_data[symbol]
+            raise ValueError(f"No ticker data available for {symbol}")
         
-        mid_price = base_price * (1 + random.gauss(0, 0.001))  # 0.1% volatility
+        # Extract price data
+        last_price = float(ticker.price)
+        volume = float(ticker.volume_24h)
         
-        return MarketFrame(
+        # Get bid/ask from orderbook if available
+        if orderbook and orderbook.bids and orderbook.asks:
+            bid = float(orderbook.bids[0][0])
+            ask = float(orderbook.asks[0][0])
+        else:
+            # Estimate spread
+            spread = last_price * 0.0001  # 0.01% default spread
+            bid = last_price - spread/2
+            ask = last_price + spread/2
+        
+        frame = MarketFrame(
             symbol=symbol,
-            timestamp=datetime.now(),
-            bid=mid_price - spread/2,
-            ask=mid_price + spread/2,
-            last=mid_price,
-            volume=random.uniform(1000, 10000),
-            source="simulation"
+            timestamp=ticker.timestamp,
+            bid=bid,
+            ask=ask,
+            last=last_price,
+            volume=volume,
+            source="bitget"
         )
+        
+        # Cache for fallback
+        self.last_data[symbol] = frame
+        
+        return frame
     
     def subscribe(self, callback: Callable):
         """Subscribe to market data"""
@@ -396,78 +464,161 @@ class StrategyHub(AsyncPipelineComponent):
         return None
 
 
-class RiskEngine(AsyncPipelineComponent):
-    """Risk management engine"""
+class UnifiedRiskManager(AsyncPipelineComponent):
+    """Unified risk management engine with Dynamic Kelly, ATR, and DD Guard"""
     
-    def __init__(self):
-        super().__init__("RiskEngine")
-        self.risk_config = {
-            'max_position_size': 0.10,  # 10% max position
-            'max_daily_loss': 0.05,     # 5% max daily loss
-            'max_correlation': 0.7,     # Max correlation between positions
-            'leverage_limit': 3.0       # Max leverage
-        }
+    def __init__(self, initial_portfolio_value: float = 150000.0):
+        super().__init__("UnifiedRiskManager")
+        self.settings = get_settings()
+        
+        # Create unified risk config from settings
+        risk_config = UnifiedRiskConfig(
+            kelly_base_fraction=self.settings.risk.kelly_fraction,
+            kelly_ewma_alpha=0.1,
+            kelly_min_trades=20,
+            atr_target_daily_vol=self.settings.risk.target_vol_daily,
+            atr_periods=self.settings.risk.atr_lookback,
+            atr_min_position=0.01,
+            atr_max_position=self.settings.trading.max_position_pct,
+            dd_caution_threshold=0.05,
+            dd_warning_threshold=self.settings.risk.max_drawdown,
+            dd_critical_threshold=0.20,
+            dd_warning_cooldown_hours=4.0,
+            dd_critical_cooldown_hours=self.settings.risk.dd_pause_duration_hours,
+            max_leverage=self.settings.trading.leverage_max,
+            min_confidence=self.settings.trading.confidence_threshold,
+            max_portfolio_vol=0.02
+        )
+        
+        self.risk_engine = UnifiedRiskEngine(risk_config, initial_portfolio_value)
+        self.portfolio_value = initial_portfolio_value
         self.current_exposure = {}
-        self.daily_pnl = 0.0
     
     async def _process_impl(self, signal_frame: SignalFrame) -> Optional[RiskFrame]:
-        """Process signal through risk engine"""
+        """Process signal through unified risk engine"""
         
-        # Risk checks
-        warnings = []
-        risk_multiplier = 1.0
-        approval_status = "approved"
-        
-        # Position size check
-        if signal_frame.target_size > self.risk_config['max_position_size']:
-            risk_multiplier *= 0.5
-            warnings.append(f"Position size reduced: {signal_frame.target_size:.3f} -> {signal_frame.target_size * risk_multiplier:.3f}")
-        
-        # Daily loss check
-        if abs(self.daily_pnl) > self.risk_config['max_daily_loss']:
-            risk_multiplier *= 0.3
-            warnings.append("Daily loss limit exceeded - reducing size")
-        
-        # Exposure check
-        current_exposure = self.current_exposure.get(signal_frame.symbol, 0.0)
-        if abs(current_exposure + signal_frame.target_size) > self.risk_config['max_position_size']:
-            risk_multiplier *= 0.7
-            warnings.append("Exposure limit exceeded - reducing size")
-        
-        # Final size calculation
-        risk_adjusted_size = signal_frame.target_size * risk_multiplier
-        
-        # Minimum size filter
-        if risk_adjusted_size < 0.001:  # 0.1% minimum
-            approval_status = "rejected"
-            warnings.append("Position too small after risk adjustment")
-        
-        return RiskFrame(
+        # Convert SignalFrame to Signal domain object
+        signal = Signal(
             symbol=signal_frame.symbol,
+            action=signal_frame.signal_type,
+            confidence=signal_frame.confidence,
+            timestamp=signal_frame.timestamp,
             strategy_id=signal_frame.strategy_id,
-            original_signal=signal_frame,
-            risk_adjusted_size=risk_adjusted_size,
-            risk_multiplier=risk_multiplier,
-            risk_warnings=warnings,
-            approval_status=approval_status,
-            timestamp=datetime.now()
+            metadata=signal_frame.metadata
         )
+        
+        # Get current price (use last price from metadata)
+        current_price = signal_frame.metadata.get('price', 50000.0)
+        
+        try:
+            # Calculate position size using unified risk engine
+            risk_decision = self.risk_engine.calculate_position_size(
+                signal=signal,
+                current_price=current_price,
+                portfolio_value=self.portfolio_value,
+                timestamp=signal_frame.timestamp
+            )
+            
+            # Convert to RiskFrame
+            if risk_decision.is_valid() and risk_decision.can_trade:
+                approval_status = "approved"
+                risk_warnings = []
+                
+                # Add any risk warnings based on constraints
+                if risk_decision.primary_constraint != "normal_sizing":
+                    risk_warnings.append(f"Limited by: {risk_decision.primary_constraint}")
+                
+                return RiskFrame(
+                    symbol=signal_frame.symbol,
+                    strategy_id=signal_frame.strategy_id,
+                    original_signal=signal_frame,
+                    risk_adjusted_size=risk_decision.position_size_pct,
+                    risk_multiplier=risk_decision.position_size_pct / signal_frame.target_size if signal_frame.target_size > 0 else 1.0,
+                    risk_warnings=risk_warnings,
+                    approval_status=approval_status,
+                    timestamp=datetime.now()
+                )
+            else:
+                # Signal rejected by risk engine
+                return RiskFrame(
+                    symbol=signal_frame.symbol,
+                    strategy_id=signal_frame.strategy_id,
+                    original_signal=signal_frame,
+                    risk_adjusted_size=0.0,
+                    risk_multiplier=0.0,
+                    risk_warnings=[risk_decision.reasoning],
+                    approval_status="rejected",
+                    timestamp=datetime.now()
+                )
+                
+        except Exception as e:
+            logger.error(f"Risk engine error: {e}")
+            
+            # Fallback to rejection
+            return RiskFrame(
+                symbol=signal_frame.symbol,
+                strategy_id=signal_frame.strategy_id,
+                original_signal=signal_frame,
+                risk_adjusted_size=0.0,
+                risk_multiplier=0.0,
+                risk_warnings=[f"Risk engine error: {str(e)}"],
+                approval_status="rejected",
+                timestamp=datetime.now()
+            )
+    
+    def update_portfolio_value(self, new_value: float) -> None:
+        """Update portfolio value for risk calculations"""
+        self.portfolio_value = new_value
+    
+    def record_trade_result(self, return_pct: float, new_portfolio_value: float) -> None:
+        """Record trade result for Kelly calculations"""
+        self.portfolio_value = new_portfolio_value
+        self.risk_engine.update_trade_result(return_pct, new_portfolio_value)
+    
+    def get_risk_statistics(self) -> Dict[str, Any]:
+        """Get comprehensive risk statistics"""
+        return self.risk_engine.get_statistics()
 
 
-class ExecutionEngine(AsyncPipelineComponent):
-    """Order execution engine"""
+class BitgetExecutionEngine(AsyncPipelineComponent):
+    """Real Bitget order execution engine"""
     
     def __init__(self):
-        super().__init__("ExecutionEngine")
+        super().__init__("BitgetExecutionEngine")
+        self.settings = get_settings()
         self.pending_orders = {}
         self.execution_history = []
-        self.connection_healthy = True
+        
+        # Initialize Bitget execution client
+        self.execution_client = None
     
     async def _start_impl(self):
         """Start execution engine"""
-        # Initialize mock connection
-        self.connection_healthy = True
-        logger.info("Execution engine connection established")
+        try:
+            # Initialize Bitget execution client
+            execution_config = {
+                'api_key': self.settings.api.bitget_key.get_secret_value(),
+                'secret_key': self.settings.api.bitget_secret.get_secret_value(),
+                'passphrase': self.settings.api.bitget_passphrase.get_secret_value(),
+                'sandbox': self.settings.api.bitget_sandbox,
+                'timeout': self.settings.api.timeout_seconds
+            }
+            
+            self.execution_client = BitgetExecutionClient(execution_config)
+            
+            # Test connection
+            await self.execution_client.test_connection()
+            
+            logger.info("Bitget execution engine connected")
+            
+        except Exception as e:
+            logger.error(f"Failed to start execution engine: {e}")
+            raise
+    
+    async def _stop_impl(self):
+        """Stop execution engine"""
+        if self.execution_client:
+            await self.execution_client.close()
     
     async def _process_impl(self, risk_frame: RiskFrame) -> Optional[ExecutionFrame]:
         """Execute risk-approved signals"""
@@ -476,13 +627,20 @@ class ExecutionEngine(AsyncPipelineComponent):
             logger.info(f"Signal rejected by risk: {risk_frame.approval_status}")
             return None
         
-        # Simulate order execution
+        if not self.execution_client:
+            logger.error("Execution client not initialized")
+            return None
+        
         signal = risk_frame.original_signal
+        
+        # Convert percentage to actual USD amount
+        portfolio_value = 150000.0  # TODO: Get from portfolio manager
+        usd_size = risk_frame.risk_adjusted_size * portfolio_value
         
         execution_frame = ExecutionFrame(
             symbol=signal.symbol,
             side=signal.signal_type,
-            size=risk_frame.risk_adjusted_size,
+            size=usd_size,  # USD amount
             order_type="market",
             price=None,  # Market order
             strategy_id=signal.strategy_id,
@@ -490,29 +648,40 @@ class ExecutionEngine(AsyncPipelineComponent):
             timestamp=datetime.now()
         )
         
-        # Simulate execution
+        # Execute order
         success = await self._execute_order(execution_frame)
         
         if success:
             self.execution_history.append(execution_frame)
-            logger.info(f"Executed: {signal.signal_type} {risk_frame.risk_adjusted_size:.4f} {signal.symbol}")
+            logger.info(f"Executed: {signal.signal_type} ${usd_size:.2f} {signal.symbol}")
             return execution_frame
         else:
             logger.error(f"Execution failed: {execution_frame.to_dict()}")
             return None
     
     async def _execute_order(self, execution_frame: ExecutionFrame) -> bool:
-        """Simulate order execution"""
-        import random
-        
-        # Simulate execution delay
-        await asyncio.sleep(random.uniform(0.1, 0.5))
-        
-        # Simulate occasional failures
-        if random.random() < 0.05:  # 5% failure rate
+        """Execute order via Bitget API"""
+        try:
+            # Convert side to Bitget format
+            side = "buy" if execution_frame.side in ["buy", "long"] else "sell"
+            
+            # Execute market order
+            result = await self.execution_client.place_market_order(
+                symbol=execution_frame.symbol,
+                side=side,
+                size_usd=execution_frame.size
+            )
+            
+            if result and result.get('success', False):
+                logger.info(f"Order executed successfully: {result.get('order_id')}")
+                return True
+            else:
+                logger.error(f"Order execution failed: {result}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Execution error: {e}")
             return False
-        
-        return True
 
 
 class TradingOrchestrator:
@@ -521,14 +690,15 @@ class TradingOrchestrator:
     Manages async components and data flow
     """
     
-    def __init__(self, symbols: List[str]):
+    def __init__(self, symbols: List[str], initial_portfolio_value: float = 150000.0):
         self.symbols = symbols
+        self.portfolio_value = initial_portfolio_value
         
-        # Initialize components
-        self.data_feed = DataFeed(symbols)
+        # Initialize components with real implementations
+        self.data_feed = BitgetDataFeed(symbols)
         self.strategy_hub = StrategyHub()
-        self.risk_engine = RiskEngine()
-        self.execution_engine = ExecutionEngine()
+        self.risk_engine = UnifiedRiskManager(initial_portfolio_value)
+        self.execution_engine = BitgetExecutionEngine()
         
         self.components = [
             self.data_feed,

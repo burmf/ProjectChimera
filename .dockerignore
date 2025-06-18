@@ -1,7 +1,10 @@
 # Git and version control
 .git
+.git/
 .gitignore
+.gitattributes
 .github
+.github/
 
 # Python
 __pycache__/
@@ -53,15 +56,22 @@ data/
 *.db
 *.sqlite3
 
-# Secrets
+# Secrets and environment files
 .env
+.env.*
 .env.local
 .env.dev
 .env.prod
+.env.development
+.env.production
+.env.staging
+.env.test
 secrets/
 *.key
 *.pem
 *.p12
+*.cert
+*.crt
 
 # Documentation
 docs/

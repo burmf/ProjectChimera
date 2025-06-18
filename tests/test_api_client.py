@@ -1,12 +1,12 @@
 """
 Professional test suite for AsyncBitgetClient
-Comprehensive testing with mocks and edge cases
+Comprehensive testing with pytest-httpx fixtures instead of mocks
 """
 
 import pytest
 import asyncio
 import httpx
-from unittest.mock import AsyncMock, patch, MagicMock
+import pytest_httpx
 from datetime import datetime
 
 from project_chimera.core.api_client import (
@@ -94,8 +94,8 @@ class TestAsyncBitgetClient:
         assert elapsed >= api_client.api_config.rate_limit_delay
     
     @pytest.mark.asyncio
-    async def test_get_futures_ticker_success(self, api_client):
-        """Test successful ticker data retrieval"""
+    async def test_get_futures_ticker_success(self, api_client, httpx_mock: pytest_httpx.HTTPXMock):
+        """Test successful ticker data retrieval using pytest-httpx"""
         mock_response = {
             "code": "00000",
             "data": [{
@@ -110,27 +110,40 @@ class TestAsyncBitgetClient:
             }]
         }
         
-        with patch.object(api_client, '_make_request', return_value=mock_response):
-            ticker = await api_client.get_futures_ticker('BTCUSDT')
-            
-            assert isinstance(ticker, TickerData)
-            assert ticker.symbol == 'BTCUSDT'
-            assert ticker.price == 50000.00
-            assert ticker.change_24h == 2.04
-            assert ticker.spread == 2.00  # askPr - bidPr
+        # Mock the HTTP request using pytest-httpx
+        httpx_mock.add_response(
+            method="GET",
+            url="https://api.bitget.com/api/mix/v1/market/ticker",
+            json=mock_response,
+            status_code=200
+        )
+        
+        ticker = await api_client.get_futures_ticker('BTCUSDT')
+        
+        assert isinstance(ticker, TickerData)
+        assert ticker.symbol == 'BTCUSDT'
+        assert ticker.price == 50000.00
+        assert ticker.change_24h == 2.04
+        assert ticker.spread == 2.00  # askPr - bidPr
     
     @pytest.mark.asyncio
-    async def test_get_futures_ticker_no_data(self, api_client):
-        """Test ticker retrieval with no data"""
+    async def test_get_futures_ticker_no_data(self, api_client, httpx_mock: pytest_httpx.HTTPXMock):
+        """Test ticker retrieval with no data using pytest-httpx"""
         mock_response = {
             "code": "00000",
             "data": []
         }
         
-        with patch.object(api_client, '_make_request', return_value=mock_response):
-            ticker = await api_client.get_futures_ticker('INVALID')
-            
-            assert ticker is None
+        httpx_mock.add_response(
+            method="GET",
+            url="https://api.bitget.com/api/mix/v1/market/ticker",
+            json=mock_response,
+            status_code=200
+        )
+        
+        ticker = await api_client.get_futures_ticker('INVALID')
+        
+        assert ticker is None
     
     @pytest.mark.asyncio
     async def test_get_multiple_tickers(self, api_client):
@@ -158,8 +171,8 @@ class TestAsyncBitgetClient:
             assert isinstance(tickers['BTCUSDT'], TickerData)
     
     @pytest.mark.asyncio
-    async def test_place_order_success(self, api_client):
-        """Test successful order placement"""
+    async def test_place_order_success(self, api_client, httpx_mock: pytest_httpx.HTTPXMock):
+        """Test successful order placement using pytest-httpx"""
         mock_response = {
             "code": "00000",
             "data": {
@@ -168,19 +181,25 @@ class TestAsyncBitgetClient:
             }
         }
         
-        with patch.object(api_client, '_make_request', return_value=mock_response):
-            result = await api_client.place_order(
-                symbol='BTCUSDT',
-                side=OrderSide.LONG,
-                size=0.01,
-                order_type=OrderType.MARKET
-            )
-            
-            assert isinstance(result, OrderResult)
-            assert result.order_id == "123456789"
-            assert result.symbol == "BTCUSDT"
-            assert result.side == OrderSide.LONG
-            assert result.size == 0.01
+        httpx_mock.add_response(
+            method="POST",
+            url="https://api.bitget.com/api/mix/v1/order/placeOrder",
+            json=mock_response,
+            status_code=200
+        )
+        
+        result = await api_client.place_order(
+            symbol='BTCUSDT',
+            side=OrderSide.LONG,
+            size=0.01,
+            order_type=OrderType.MARKET
+        )
+        
+        assert isinstance(result, OrderResult)
+        assert result.order_id == "123456789"
+        assert result.symbol == "BTCUSDT"
+        assert result.side == OrderSide.LONG
+        assert result.size == 0.01
     
     @pytest.mark.asyncio
     async def test_place_order_with_price(self, api_client):
@@ -206,25 +225,29 @@ class TestAsyncBitgetClient:
             assert result.order_type == OrderType.LIMIT
     
     @pytest.mark.asyncio
-    async def test_api_error_handling(self, api_client):
-        """Test API error handling"""
+    async def test_api_error_handling(self, api_client, httpx_mock: pytest_httpx.HTTPXMock):
+        """Test API error handling using pytest-httpx"""
         # Test different error responses
-        error_responses = [
-            (401, AuthenticationException),
-            (429, RateLimitException),
-            (500, ConnectionException),
-            (400, APIException)
+        error_test_cases = [
+            (401, AuthenticationException, {"error": "Unauthorized"}),
+            (429, RateLimitException, {"error": "Rate limit exceeded"}),
+            (500, ConnectionException, {"error": "Internal server error"}),
+            (400, APIException, {"error": "Bad request"})
         ]
         
-        for status_code, expected_exception in error_responses:
-            mock_response = MagicMock()
-            mock_response.status_code = status_code
-            mock_response.json.return_value = {"error": "test error"}
-            mock_response.content = b'{"error": "test error"}'
+        for status_code, expected_exception, error_body in error_test_cases:
+            # Clear previous mocks
+            httpx_mock.reset(assert_all_responses_have_been_requested=False)
             
-            with patch.object(api_client.client, 'request', return_value=mock_response):
-                with pytest.raises(expected_exception):
-                    await api_client._make_request('GET', '/test')
+            httpx_mock.add_response(
+                method="GET",
+                url="https://api.bitget.com/test",
+                json=error_body,
+                status_code=status_code
+            )
+            
+            with pytest.raises(expected_exception):
+                await api_client._make_request('GET', '/test')
     
     @pytest.mark.asyncio
     async def test_connection_error(self, api_client):
