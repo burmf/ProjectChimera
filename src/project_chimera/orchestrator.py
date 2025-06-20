@@ -16,10 +16,14 @@ import traceback
 from contextlib import asynccontextmanager
 
 from .settings import get_settings
-from .datafeed.adapters.bitget_enhanced import BitgetEnhancedAdapter
+from .datafeed.bitget_ws import BitgetWebSocketFeed, create_bitget_ws_feed
 from .risk.unified_engine import UnifiedRiskEngine, UnifiedRiskConfig
-from .execution.bitget import BitgetExecutionClient
-from .domains.market import Ticker, OrderBook, Signal
+from .execution.bitget import BitgetExecutionClient, BitgetConfig
+from .domains.market import Ticker, OrderBook, Signal, MarketFrame, SignalType
+from .strategies import (
+    WeekendEffectStrategy, StopReversionStrategy, FundingContraStrategy,
+    create_weekend_effect_strategy, create_stop_reversion_strategy, create_funding_contra_strategy
+)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -33,6 +37,51 @@ class ComponentState(Enum):
     RUNNING = "running"
     STOPPING = "stopping"
     ERROR = "error"
+
+
+class CircuitBreakerState(Enum):
+    """Circuit breaker states"""
+    CLOSED = "closed"  # Normal operation
+    OPEN = "open"      # Circuit breaker triggered
+    HALF_OPEN = "half_open"  # Testing if service recovered
+
+
+@dataclass
+class CircuitBreaker:
+    """Circuit breaker for order execution failures"""
+    failure_threshold: int = 3
+    recovery_timeout: int = 300  # 5 minutes
+    
+    failure_count: int = 0
+    last_failure_time: float = 0.0
+    state: CircuitBreakerState = CircuitBreakerState.CLOSED
+    
+    def record_success(self) -> None:
+        """Record successful operation"""
+        self.failure_count = 0
+        self.state = CircuitBreakerState.CLOSED
+        
+    def record_failure(self) -> None:
+        """Record failed operation"""
+        self.failure_count += 1
+        self.last_failure_time = time.time()
+        
+        if self.failure_count >= self.failure_threshold:
+            self.state = CircuitBreakerState.OPEN
+            logger.warning(f"Circuit breaker OPENED after {self.failure_count} failures")
+    
+    def can_attempt(self) -> bool:
+        """Check if operation can be attempted"""
+        if self.state == CircuitBreakerState.CLOSED:
+            return True
+        elif self.state == CircuitBreakerState.OPEN:
+            if time.time() - self.last_failure_time > self.recovery_timeout:
+                self.state = CircuitBreakerState.HALF_OPEN
+                logger.info("Circuit breaker entering HALF_OPEN state")
+                return True
+            return False
+        else:  # HALF_OPEN
+            return True
 
 
 class PipelineStage(Enum):

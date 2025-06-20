@@ -118,34 +118,69 @@ class BitgetEnhancedAdapter(ExchangeAdapter):
             raise
     
     async def _connect_websockets(self) -> None:
-        """Connect to Bitget WebSocket streams"""
+        """Connect to Bitget WebSocket streams with enhanced error handling"""
+        exchange_config = get_exchange_config('bitget')
+        
         try:
-            # Connect spot WebSocket
-            self.spot_ws = await websockets.connect(self.SPOT_WS_URL)
+            # Connect spot WebSocket with proper settings
+            self.spot_ws = await websockets.connect(
+                self.SPOT_WS_URL,
+                ping_interval=exchange_config.heartbeat_interval,
+                ping_timeout=10,
+                close_timeout=10,
+                max_size=2**20,  # 1MB message size limit
+                compression=None  # Disable compression for speed
+            )
+            logger.info(f"Connected to Bitget spot WebSocket: {self.SPOT_WS_URL}")
             
             # Connect mix (futures) WebSocket
-            self.mix_ws = await websockets.connect(self.MIX_WS_URL)
+            self.mix_ws = await websockets.connect(
+                self.MIX_WS_URL,
+                ping_interval=exchange_config.heartbeat_interval,
+                ping_timeout=10,
+                close_timeout=10,
+                max_size=2**20,
+                compression=None
+            )
+            logger.info(f"Connected to Bitget mix WebSocket: {self.MIX_WS_URL}")
             
-            # Start message handlers
+            # Start message handlers with error handling
             asyncio.create_task(self._handle_spot_messages())
             asyncio.create_task(self._handle_mix_messages())
+            asyncio.create_task(self._monitor_connections())
             
-            logger.debug("Bitget WebSocket connections established")
+            logger.info("Bitget WebSocket connections established successfully")
             
         except Exception as e:
             logger.error(f"WebSocket connection failed: {e}")
+            self.status = ConnectionStatus.FAILED
             raise
     
     async def disconnect(self) -> None:
-        """Close all connections"""
-        self.status = ConnectionStatus.DISCONNECTED
-        
-        # Close WebSocket connections
-        if self.spot_ws and not self.spot_ws.closed:
-            await self.spot_ws.close()
-        
-        if self.mix_ws and not self.mix_ws.closed:
-            await self.mix_ws.close()
+        """Close all connections gracefully"""
+        try:
+            self.status = ConnectionStatus.DISCONNECTING
+            
+            # Close WebSocket connections
+            if self.spot_ws and not self.spot_ws.closed:
+                await self.spot_ws.close()
+                logger.info("Spot WebSocket disconnected")
+                
+            if self.mix_ws and not self.mix_ws.closed:
+                await self.mix_ws.close()
+                logger.info("Mix WebSocket disconnected")
+            
+            # Close HTTP client
+            if self.http_client:
+                await self.http_client.aclose()
+                logger.info("HTTP client closed")
+            
+            self.status = ConnectionStatus.DISCONNECTED
+            logger.info("BitgetEnhancedAdapter disconnected gracefully")
+            
+        except Exception as e:
+            logger.error(f"Error during disconnect: {e}")
+            self.status = ConnectionStatus.ERROR
         
         # Close HTTP client
         if self.http_client:

@@ -3,6 +3,7 @@ Unified Risk Engine - Phase D Implementation
 Integrates Dynamic Kelly, ATR Target, and DD Guard systems
 """
 
+import asyncio
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, List
@@ -152,24 +153,29 @@ class UnifiedRiskEngine:
         
         logger.info(f"Unified Risk Engine initialized with equity: {initial_equity:.4f}")
     
-    def calculate_position_size(
+    async def calculate_position_size(
         self,
         signal: Signal,
         current_price: float,
-        portfolio_value: float,
+        portfolio_value: Optional[float] = None,
         timestamp: Optional[datetime] = None
     ) -> UnifiedRiskDecision:
         """
-        Calculate optimal position size using all risk factors
+        Calculate optimal position size using all risk factors (ASYNC)
         
         Process:
-        1. Check DD guard status - can we trade?
-        2. Get Kelly-optimal sizing if sufficient data
-        3. Get ATR-based sizing for volatility targeting  
-        4. Apply DD guard multiplier
-        5. Calculate final leverage and risk metrics
-        6. Generate comprehensive decision with reasoning
+        1. Await portfolio value from wallet if not provided
+        2. Check DD guard status - can we trade?
+        3. Get Kelly-optimal sizing if sufficient data
+        4. Get ATR-based sizing for volatility targeting  
+        5. Apply DD guard multiplier
+        6. Calculate final leverage and risk metrics
+        7. Generate comprehensive decision with reasoning
         """
+        
+        # Await wallet equity if not provided
+        if portfolio_value is None:
+            portfolio_value = await self._get_portfolio_value()
         
         if timestamp is None:
             timestamp = datetime.now()
@@ -437,7 +443,7 @@ class UnifiedRiskEngine:
         
         # Signal assessment
         signal_strength = "strong" if signal.confidence > 0.7 else "moderate" if signal.confidence > 0.4 else "weak"
-        parts.append(f"{signal_strength} {signal.action} signal ({signal.confidence:.2f})")
+        parts.append(f"{signal_strength} {signal.signal_type.value} signal ({signal.confidence:.2f})")
         
         # Sizing method
         if sizing_method == "kelly" and kelly_result.sample_size >= self.config.kelly_min_trades:
@@ -493,6 +499,72 @@ class UnifiedRiskEngine:
             sizing_method="none",
             reasoning=reason
         )
+    
+    async def _get_portfolio_value(self) -> float:
+        """Get current portfolio value from wallet/exchange"""
+        try:
+            # In production, this would call the exchange API
+            # For now, return the last known equity value from DD guard
+            return self.dd_guard.current_equity
+        except Exception as e:
+            logger.error(f"Failed to get portfolio value: {e}")
+            # Fallback to DD guard equity
+            return self.dd_guard.current_equity
+    
+    async def _get_trade_statistics(self) -> Dict[str, float]:
+        """Get trade statistics for Kelly calculation"""
+        try:
+            # TODO: In production, query trade database for actual stats
+            # For now, return default conservative estimates
+            return {
+                'win_rate': 0.55,
+                'avg_win': 0.02,
+                'avg_loss': 0.01,
+                'total_trades': 50
+            }
+        except Exception as e:
+            logger.error(f"Failed to get trade statistics: {e}")
+            return {
+                'win_rate': 0.50,  # Conservative fallback
+                'avg_win': 0.015,
+                'avg_loss': 0.01,
+                'total_trades': 10
+            }
+    
+    async def evaluate_signal_async(self, signal: Signal, current_price: float) -> UnifiedRiskDecision:
+        """Async version of signal evaluation for pipeline integration"""
+        return await self.calculate_position_size(signal, current_price)
+    
+    def can_trade_sync(self) -> bool:
+        """Synchronous check if trading is allowed (DD guard)"""
+        current_equity = self.dd_guard.current_equity
+        dd_state = self.dd_guard.update_equity(current_equity, datetime.now())
+        return dd_state.can_trade()
+    
+    async def health_check(self) -> Dict[str, Any]:
+        """Async health check for risk engine status"""
+        try:
+            portfolio_value = await self._get_portfolio_value()
+            trade_stats = await self._get_trade_statistics()
+            
+            dd_state = self.dd_guard.update_equity(portfolio_value, datetime.now())
+            
+            return {
+                'status': 'healthy',
+                'portfolio_value': portfolio_value,
+                'can_trade': dd_state.can_trade(),
+                'dd_tier': dd_state.tier.value,
+                'dd_pct': dd_state.drawdown_pct,
+                'kelly_trades': trade_stats['total_trades'],
+                'kelly_win_rate': trade_stats['win_rate'],
+                'last_decision': self.last_decision.primary_constraint if self.last_decision else 'none'
+            }
+        except Exception as e:
+            logger.error(f"Risk engine health check failed: {e}")
+            return {
+                'status': 'error',
+                'error': str(e)
+            }
     
     def get_statistics(self) -> Dict[str, Any]:
         """Get comprehensive risk engine statistics"""

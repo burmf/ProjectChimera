@@ -1,0 +1,529 @@
+"""
+Comprehensive tests for TradingOrchestrator v2 - targeting high coverage improvement
+Tests for pipeline processing, circuit breaker, and metrics tracking
+"""
+
+import pytest
+import asyncio
+import time
+from datetime import datetime
+from unittest.mock import AsyncMock, MagicMock, patch
+from decimal import Decimal
+
+# Mock problematic imports before importing orchestrator
+with patch.dict('sys.modules', {
+    'project_chimera.execution.bitget': MagicMock(),
+    'project_chimera.strategies': MagicMock(),
+    'project_chimera.datafeed.bitget_ws': MagicMock(),
+    'project_chimera.risk.unified_engine': MagicMock()
+}):
+    from project_chimera.orchestrator_v2 import (
+        PipelineStage, CircuitBreakerState, 
+        PipelineMetrics, ExecutionCircuitBreaker
+    )
+
+from project_chimera.domains.market import (
+    MarketFrame, Signal, SignalType, SignalStrength, Ticker, OrderBook
+)
+
+
+class TestPipelineStage:
+    """Test PipelineStage enum"""
+    
+    def test_pipeline_stage_values(self):
+        """Test pipeline stage enum values"""
+        assert PipelineStage.FEED.value == "feed"
+        assert PipelineStage.STRATEGY.value == "strategy"
+        assert PipelineStage.RISK.value == "risk"
+        assert PipelineStage.EXECUTION.value == "execution"
+
+
+class TestCircuitBreakerState:
+    """Test CircuitBreakerState enum"""
+    
+    def test_circuit_breaker_state_values(self):
+        """Test circuit breaker state enum values"""
+        assert CircuitBreakerState.CLOSED.value == "closed"
+        assert CircuitBreakerState.OPEN.value == "open"
+        assert CircuitBreakerState.HALF_OPEN.value == "half_open"
+
+
+class TestPipelineMetrics:
+    """Test PipelineMetrics dataclass"""
+    
+    def test_metrics_initialization(self):
+        """Test metrics initialization"""
+        start_time = datetime.now()
+        metrics = PipelineMetrics(start_time=start_time)
+        
+        assert metrics.start_time == start_time
+        assert metrics.market_updates == 0
+        assert metrics.signals_generated == 0
+        assert metrics.signals_approved == 0
+        assert metrics.orders_executed == 0
+        assert metrics.orders_failed == 0
+        assert metrics.avg_latency_ms == 0.0
+        assert metrics.errors_by_stage is not None
+        
+        # Check errors_by_stage is properly initialized
+        assert metrics.errors_by_stage['feed'] == 0
+        assert metrics.errors_by_stage['strategy'] == 0
+        assert metrics.errors_by_stage['risk'] == 0
+        assert metrics.errors_by_stage['execution'] == 0
+    
+    def test_metrics_with_custom_values(self):
+        """Test metrics with custom values"""
+        start_time = datetime.now()
+        custom_errors = {'feed': 1, 'strategy': 2, 'risk': 0, 'execution': 1}
+        
+        metrics = PipelineMetrics(
+            start_time=start_time,
+            market_updates=100,
+            signals_generated=50,
+            signals_approved=25,
+            orders_executed=20,
+            orders_failed=5,
+            avg_latency_ms=15.5,
+            errors_by_stage=custom_errors
+        )
+        
+        assert metrics.market_updates == 100
+        assert metrics.signals_generated == 50
+        assert metrics.signals_approved == 25
+        assert metrics.orders_executed == 20
+        assert metrics.orders_failed == 5
+        assert metrics.avg_latency_ms == 15.5
+        assert metrics.errors_by_stage == custom_errors
+
+
+class TestExecutionCircuitBreaker:
+    """Test ExecutionCircuitBreaker class"""
+    
+    def test_circuit_breaker_initialization(self):
+        """Test circuit breaker initialization"""
+        cb = ExecutionCircuitBreaker(failure_threshold=5, recovery_timeout=600)
+        
+        assert cb.failure_threshold == 5
+        assert cb.recovery_timeout == 600
+        assert cb.failure_count == 0
+        assert cb.last_failure_time == 0.0
+        assert cb.state == CircuitBreakerState.CLOSED
+    
+    def test_circuit_breaker_can_execute_closed(self):
+        """Test circuit breaker allows execution when closed"""
+        cb = ExecutionCircuitBreaker()
+        assert cb.can_execute() is True
+    
+    def test_circuit_breaker_record_success_closed(self):
+        """Test recording success when closed"""
+        cb = ExecutionCircuitBreaker()
+        cb.failure_count = 2  # Some failures before success
+        
+        cb.record_success()
+        
+        assert cb.failure_count == 0
+        assert cb.state == CircuitBreakerState.CLOSED
+    
+    def test_circuit_breaker_record_success_half_open(self):
+        """Test recording success when half-open"""
+        cb = ExecutionCircuitBreaker()
+        cb.state = CircuitBreakerState.HALF_OPEN
+        cb.failure_count = 2
+        
+        cb.record_success()
+        
+        assert cb.failure_count == 0
+        assert cb.state == CircuitBreakerState.CLOSED
+    
+    def test_circuit_breaker_record_failure(self):
+        """Test recording failures"""
+        cb = ExecutionCircuitBreaker(failure_threshold=3)
+        
+        # First failure
+        cb.record_failure()
+        assert cb.failure_count == 1
+        assert cb.state == CircuitBreakerState.CLOSED
+        assert cb.last_failure_time > 0
+        
+        # Second failure
+        cb.record_failure()
+        assert cb.failure_count == 2
+        assert cb.state == CircuitBreakerState.CLOSED
+        
+        # Third failure - should open circuit
+        cb.record_failure()
+        assert cb.failure_count == 3
+        assert cb.state == CircuitBreakerState.OPEN
+    
+    def test_circuit_breaker_can_execute_open(self):
+        """Test circuit breaker blocks execution when open"""
+        cb = ExecutionCircuitBreaker(failure_threshold=1, recovery_timeout=1)
+        
+        # Trigger circuit breaker
+        cb.record_failure()
+        assert cb.state == CircuitBreakerState.OPEN
+        assert cb.can_execute() is False
+        
+        # Wait for recovery timeout
+        time.sleep(1.1)
+        assert cb.can_execute() is True
+        assert cb.state == CircuitBreakerState.HALF_OPEN
+    
+    def test_circuit_breaker_half_open_state(self):
+        """Test circuit breaker half-open state"""
+        cb = ExecutionCircuitBreaker(failure_threshold=1)
+        cb.state = CircuitBreakerState.HALF_OPEN
+        
+        assert cb.can_execute() is True
+
+
+class TestTradingOrchestrator:
+    """Test TradingOrchestrator class"""
+    
+    @pytest.fixture
+    def mock_settings(self):
+        """Mock settings for testing"""
+        settings = MagicMock()
+        settings.api.bitget_key.get_secret_value.return_value = "test_key"
+        settings.api.bitget_secret.get_secret_value.return_value = "test_secret"
+        settings.api.bitget_passphrase.get_secret_value.return_value = "test_pass"
+        settings.api.bitget_sandbox = True
+        return settings
+    
+    @pytest.fixture
+    def orchestrator(self, mock_settings):
+        """Create orchestrator with mocked dependencies"""
+        with patch('project_chimera.orchestrator_v2.get_settings', return_value=mock_settings):
+            with patch('project_chimera.orchestrator_v2.create_bitget_ws_feed') as mock_feed:
+                with patch('project_chimera.orchestrator_v2.UnifiedRiskEngine') as mock_risk:
+                    with patch('project_chimera.orchestrator_v2.BitgetExecutionClient') as mock_exec:
+                        # Mock strategy creation functions
+                        with patch('project_chimera.orchestrator_v2.create_weekend_effect_strategy') as mock_we:
+                            with patch('project_chimera.orchestrator_v2.create_stop_reversion_strategy') as mock_sr:
+                                with patch('project_chimera.orchestrator_v2.create_funding_contra_strategy') as mock_fc:
+                                    
+                                    # Setup strategy mocks
+                                    mock_we.return_value = MagicMock()
+                                    mock_sr.return_value = MagicMock()
+                                    mock_fc.return_value = MagicMock()
+                                    
+                                    orchestrator = TradingOrchestrator(
+                                        symbols=["BTCUSDT", "ETHUSDT"],
+                                        initial_equity=150000.0
+                                    )
+                                    
+                                    # Store mocks for test access
+                                    orchestrator._mock_feed = mock_feed.return_value
+                                    orchestrator._mock_risk = mock_risk.return_value
+                                    orchestrator._mock_exec = mock_exec.return_value
+                                    
+                                    return orchestrator
+    
+    def test_orchestrator_initialization(self, orchestrator):
+        """Test orchestrator initialization"""
+        assert orchestrator.symbols == ["BTCUSDT", "ETHUSDT"]
+        assert orchestrator.initial_equity == 150000.0
+        assert isinstance(orchestrator.circuit_breaker, ExecutionCircuitBreaker)
+        assert orchestrator.running is False
+        assert len(orchestrator.tasks) == 0
+        assert isinstance(orchestrator.metrics, PipelineMetrics)
+        assert len(orchestrator.strategies) == 3
+        assert 'weekend_effect' in orchestrator.strategies
+        assert 'stop_reversion' in orchestrator.strategies
+        assert 'funding_contrarian' in orchestrator.strategies
+    
+    def test_orchestrator_component_initialization(self, orchestrator):
+        """Test component initialization"""
+        assert hasattr(orchestrator, 'data_feed')
+        assert hasattr(orchestrator, 'risk_engine')
+        assert hasattr(orchestrator, 'execution_client')
+    
+    @pytest.mark.asyncio
+    async def test_orchestrator_start_success(self, orchestrator):
+        """Test successful orchestrator start"""
+        # Mock data feed methods
+        orchestrator._mock_feed.connect = AsyncMock()
+        orchestrator._mock_feed.subscribe_ticker = AsyncMock()
+        orchestrator._mock_feed.subscribe_orderbook = AsyncMock()
+        orchestrator._mock_feed.subscribe_trades = AsyncMock()
+        orchestrator._mock_feed.subscribe_funding = AsyncMock()
+        orchestrator._mock_feed.subscribe_open_interest = AsyncMock()
+        
+        # Mock pipeline tasks to prevent actual execution
+        with patch.object(orchestrator, '_market_data_pipeline', new_callable=AsyncMock):
+            with patch.object(orchestrator, '_health_monitor', new_callable=AsyncMock):
+                with patch.object(orchestrator, '_metrics_reporter', new_callable=AsyncMock):
+                    
+                    await orchestrator.start()
+                    
+                    assert orchestrator.running is True
+                    assert len(orchestrator.tasks) == 3
+                    assert orchestrator._mock_feed.connect.called
+                    assert orchestrator._mock_feed.subscribe_ticker.call_count == 2  # 2 symbols
+    
+    @pytest.mark.asyncio
+    async def test_orchestrator_start_failure(self, orchestrator):
+        """Test orchestrator start failure handling"""
+        # Mock data feed to raise exception
+        orchestrator._mock_feed.connect = AsyncMock(side_effect=Exception("Connection failed"))
+        
+        with patch.object(orchestrator, 'stop', new_callable=AsyncMock) as mock_stop:
+            with pytest.raises(Exception, match="Connection failed"):
+                await orchestrator.start()
+            
+            mock_stop.assert_called_once()
+    
+    @pytest.mark.asyncio
+    async def test_orchestrator_stop(self, orchestrator):
+        """Test orchestrator stop"""
+        # Setup running state with mock tasks
+        orchestrator.running = True
+        mock_task1 = AsyncMock()
+        mock_task2 = AsyncMock()
+        orchestrator.tasks = [mock_task1, mock_task2]
+        
+        # Mock data feed disconnect
+        orchestrator._mock_feed.disconnect = AsyncMock()
+        
+        await orchestrator.stop()
+        
+        assert orchestrator.running is False
+        mock_task1.cancel.assert_called_once()
+        mock_task2.cancel.assert_called_once()
+        orchestrator._mock_feed.disconnect.assert_called_once()
+    
+    @pytest.mark.asyncio
+    async def test_build_market_frame_success(self, orchestrator):
+        """Test successful market frame building"""
+        # Mock ticker and orderbook
+        mock_ticker = Ticker(
+            symbol="BTCUSDT",
+            price=Decimal("50000"),
+            volume_24h=Decimal("1000"),
+            change_24h=Decimal("500"),
+            timestamp=datetime.now()
+        )
+        
+        mock_orderbook = OrderBook(
+            symbol="BTCUSDT",
+            bids=[(Decimal("49900"), Decimal("1.0"))],
+            asks=[(Decimal("50100"), Decimal("1.0"))],
+            timestamp=datetime.now()
+        )
+        
+        orchestrator._mock_feed.get_ticker = AsyncMock(return_value=mock_ticker)
+        orchestrator._mock_feed.get_orderbook = AsyncMock(return_value=mock_orderbook)
+        
+        market_frame = await orchestrator._build_market_frame("BTCUSDT")
+        
+        assert market_frame is not None
+        assert market_frame.symbol == "BTCUSDT"
+        assert market_frame.ticker == mock_ticker
+        assert market_frame.orderbook == mock_orderbook
+    
+    @pytest.mark.asyncio
+    async def test_build_market_frame_no_ticker(self, orchestrator):
+        """Test market frame building when no ticker available"""
+        orchestrator._mock_feed.get_ticker = AsyncMock(return_value=None)
+        orchestrator._mock_feed.get_orderbook = AsyncMock(return_value=None)
+        
+        market_frame = await orchestrator._build_market_frame("BTCUSDT")
+        
+        assert market_frame is None
+    
+    @pytest.mark.asyncio
+    async def test_build_market_frame_exception(self, orchestrator):
+        """Test market frame building with exception"""
+        orchestrator._mock_feed.get_ticker = AsyncMock(side_effect=Exception("Feed error"))
+        
+        market_frame = await orchestrator._build_market_frame("BTCUSDT")
+        
+        assert market_frame is None
+    
+    @pytest.mark.asyncio
+    async def test_generate_signals(self, orchestrator):
+        """Test signal generation from strategies"""
+        # Create mock market frame
+        market_frame = MarketFrame(
+            symbol="BTCUSDT",
+            timestamp=datetime.now(),
+            ticker=Ticker(
+                symbol="BTCUSDT",
+                price=Decimal("50000"),
+                volume_24h=Decimal("1000"),
+                change_24h=Decimal("500"),
+                timestamp=datetime.now()
+            )
+        )
+        
+        # Mock strategy signals
+        mock_signal1 = Signal(
+            symbol="BTCUSDT",
+            signal_type=SignalType.BUY,
+            strength=SignalStrength.STRONG,
+            price=Decimal("50000"),
+            timestamp=datetime.now(),
+            strategy_name="weekend_effect",
+            confidence=0.8
+        )
+        
+        mock_signal2 = Signal(
+            symbol="BTCUSDT",
+            signal_type=SignalType.SELL,
+            strength=SignalStrength.MEDIUM,
+            price=Decimal("50000"),
+            timestamp=datetime.now(),
+            strategy_name="stop_reversion",
+            confidence=0.6
+        )
+        
+        # Setup strategy mocks
+        for strategy in orchestrator.strategies.values():
+            strategy.config.enabled = True
+            strategy.generate = AsyncMock()
+        
+        orchestrator.strategies['weekend_effect'].generate.return_value = [mock_signal1]
+        orchestrator.strategies['stop_reversion'].generate.return_value = [mock_signal2]
+        orchestrator.strategies['funding_contrarian'].generate.return_value = []
+        
+        signals = await orchestrator._generate_signals(market_frame)
+        
+        assert len(signals) == 2
+        assert mock_signal1 in signals
+        assert mock_signal2 in signals
+    
+    @pytest.mark.asyncio
+    async def test_generate_signals_disabled_strategy(self, orchestrator):
+        """Test signal generation with disabled strategy"""
+        market_frame = MarketFrame(
+            symbol="BTCUSDT",
+            timestamp=datetime.now(),
+            ticker=Ticker(
+                symbol="BTCUSDT",
+                price=Decimal("50000"),
+                volume_24h=Decimal("1000"),
+                change_24h=Decimal("500"),
+                timestamp=datetime.now()
+            )
+        )
+        
+        # Disable all strategies
+        for strategy in orchestrator.strategies.values():
+            strategy.config.enabled = False
+            strategy.generate = AsyncMock()
+        
+        signals = await orchestrator._generate_signals(market_frame)
+        
+        assert len(signals) == 0
+        # Verify generate was not called for disabled strategies
+        for strategy in orchestrator.strategies.values():
+            strategy.generate.assert_not_called()
+    
+    @pytest.mark.asyncio
+    async def test_generate_signals_exception_handling(self, orchestrator):
+        """Test signal generation with strategy exceptions"""
+        market_frame = MarketFrame(
+            symbol="BTCUSDT",
+            timestamp=datetime.now(),
+            ticker=Ticker(
+                symbol="BTCUSDT",
+                price=Decimal("50000"),
+                volume_24h=Decimal("1000"),
+                change_24h=Decimal("500"),
+                timestamp=datetime.now()
+            )
+        )
+        
+        # Setup strategies - one working, one failing
+        orchestrator.strategies['weekend_effect'].config.enabled = True
+        orchestrator.strategies['weekend_effect'].generate = AsyncMock(side_effect=Exception("Strategy error"))
+        
+        orchestrator.strategies['stop_reversion'].config.enabled = True
+        mock_signal = Signal(
+            symbol="BTCUSDT",
+            signal_type=SignalType.BUY,
+            strength=SignalStrength.STRONG,
+            price=Decimal("50000"),
+            timestamp=datetime.now(),
+            strategy_name="stop_reversion",
+            confidence=0.8
+        )
+        orchestrator.strategies['stop_reversion'].generate = AsyncMock(return_value=[mock_signal])
+        
+        orchestrator.strategies['funding_contrarian'].config.enabled = False
+        
+        signals = await orchestrator._generate_signals(market_frame)
+        
+        # Should still get signal from working strategy
+        assert len(signals) == 1
+        assert signals[0] == mock_signal
+    
+    @pytest.mark.asyncio
+    async def test_process_symbol_complete_pipeline(self, orchestrator):
+        """Test complete symbol processing pipeline"""
+        # Mock market frame building
+        mock_market_frame = MarketFrame(
+            symbol="BTCUSDT",
+            timestamp=datetime.now(),
+            ticker=Ticker(
+                symbol="BTCUSDT",
+                price=Decimal("50000"),
+                volume_24h=Decimal("1000"),
+                change_24h=Decimal("500"),
+                timestamp=datetime.now()
+            )
+        )
+        
+        # Mock signal generation
+        mock_signal = Signal(
+            symbol="BTCUSDT",
+            signal_type=SignalType.BUY,
+            strength=SignalStrength.STRONG,
+            price=Decimal("50000"),
+            timestamp=datetime.now(),
+            strategy_name="test_strategy",
+            confidence=0.8
+        )
+        
+        with patch.object(orchestrator, '_build_market_frame', return_value=mock_market_frame):
+            with patch.object(orchestrator, '_generate_signals', return_value=[mock_signal]):
+                with patch.object(orchestrator, '_process_signal', new_callable=AsyncMock) as mock_process:
+                    
+                    initial_updates = orchestrator.metrics.market_updates
+                    
+                    await orchestrator._process_symbol("BTCUSDT")
+                    
+                    assert orchestrator.metrics.market_updates == initial_updates + 1
+                    mock_process.assert_called_once_with(mock_signal, 50000.0)
+    
+    @pytest.mark.asyncio  
+    async def test_process_symbol_no_market_frame(self, orchestrator):
+        """Test symbol processing when no market frame available"""
+        with patch.object(orchestrator, '_build_market_frame', return_value=None):
+            with patch.object(orchestrator, '_generate_signals') as mock_gen:
+                
+                await orchestrator._process_symbol("BTCUSDT")
+                
+                # Should not call signal generation if no market frame
+                mock_gen.assert_not_called()
+    
+    def test_circuit_breaker_integration(self, orchestrator):
+        """Test circuit breaker integration"""
+        assert isinstance(orchestrator.circuit_breaker, ExecutionCircuitBreaker)
+        assert orchestrator.circuit_breaker.failure_threshold == 3
+        assert orchestrator.circuit_breaker.recovery_timeout == 300
+    
+    def test_metrics_initialization(self, orchestrator):
+        """Test metrics initialization"""
+        assert isinstance(orchestrator.metrics, PipelineMetrics)
+        assert orchestrator.metrics.market_updates == 0
+        assert orchestrator.metrics.signals_generated == 0
+        assert orchestrator.metrics.avg_latency_ms == 0.0
+        assert 'feed' in orchestrator.metrics.errors_by_stage
+    
+    def test_strategies_initialization(self, orchestrator):
+        """Test strategies initialization"""
+        assert len(orchestrator.strategies) == 3
+        assert 'weekend_effect' in orchestrator.strategies
+        assert 'stop_reversion' in orchestrator.strategies  
+        assert 'funding_contrarian' in orchestrator.strategies

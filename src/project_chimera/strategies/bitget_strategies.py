@@ -98,7 +98,7 @@ class VolBreakoutBitgetStrategy(TechnicalStrategy):
         
         # Bearish breakout: close < low * (1 - 2%)
         breakout_short_level = current_low * (1 - self.breakout_threshold)
-        elif current_price < breakout_short_level:
+        if current_price < breakout_short_level:
             signal_type = SignalType.SELL
             if volume_confirmed:
                 confidence = 0.8
