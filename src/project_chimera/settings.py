@@ -242,14 +242,10 @@ class Settings(BaseSettings):
     monitoring: MonitoringConfig = Field(default_factory=MonitoringConfig)
     strategies: StrategiesConfig = Field(default_factory=StrategiesConfig)
     exchange_adapters: ExchangeAdaptersConfig = Field(default_factory=ExchangeAdaptersConfig)
-    
+
     # Paths
     data_dir: Path = Field(default=Path("data"), description="Data directory")
     logs_dir: Path = Field(default=Path("logs"), description="Logs directory")
-    
-    # Sub-configurations - enhanced with strategies
-    strategies: StrategiesConfig = Field(default_factory=StrategiesConfig)
-    exchange_adapters: ExchangeAdaptersConfig = Field(default_factory=ExchangeAdaptersConfig)
     
     model_config = SettingsConfigDict(
         env_file=".env",
