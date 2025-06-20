@@ -79,7 +79,16 @@ chimera = "project_chimera.cli:main"
 chimera-backtest = "project_chimera.cli.backtest:main"
 
 [project.entry-points."chimera.strategies"]
-volatility_breakout = "project_chimera.strategies.vol_breakout:create_vol_breakout_strategy"
+# STRAT-7: Core trading strategies
+weekend_effect = "project_chimera.strategies.weekend_effect:create_weekend_effect_strategy"
+stop_reversion = "project_chimera.strategies.stop_rev:create_stop_reversion_strategy"
+funding_contrarian = "project_chimera.strategies.fund_contra:create_funding_contra_strategy"
+lob_reversion = "project_chimera.strategies.lob_revert:create_lob_reversion_strategy"
+volatility_breakout = "project_chimera.strategies.vol_breakout:create_volatility_breakout_strategy"
+cme_gap = "project_chimera.strategies.cme_gap:create_cme_gap_strategy"
+basis_arbitrage = "project_chimera.strategies.basis_arb:create_basis_arbitrage_strategy"
+
+# Legacy strategies
 mini_momentum = "project_chimera.strategies.mini_momo:create_mini_momentum_strategy"
 orderbook_mean_reversion = "project_chimera.strategies.ob_revert:create_orderbook_reversion_strategy"
 
