@@ -18,6 +18,7 @@ import httpx
 
 from ..protocols import ExchangeAdapter, ConnectionStatus
 from ...domains.market import Ticker, OrderBook, OHLCV, FundingRate
+from ...settings import get_exchange_config
 
 
 logger = logging.getLogger(__name__)
@@ -36,24 +37,28 @@ class BitgetEnhancedAdapter(ExchangeAdapter):
     - Automatic reconnection with exponential backoff
     """
     
-    # API Endpoints
-    SPOT_WS_URL = "wss://ws.bitget.com/spot/v1/stream"
-    MIX_WS_URL = "wss://ws.bitget.com/mix/v1/stream"
-    REST_BASE_URL = "https://api.bitget.com"
-    
+    # API Endpoints - loaded from settings
     def __init__(self, name: str, config: Dict[str, Any]):
         super().__init__(name, config)
         
-        # Configuration
+        # Load exchange configuration from settings
+        exchange_config = get_exchange_config('bitget')
+        
+        self.SPOT_WS_URL = exchange_config.spot_ws_url
+        self.MIX_WS_URL = exchange_config.mix_ws_url
+        self.REST_BASE_URL = exchange_config.rest_base_url
+    
+        
+        # Configuration from settings and provided config
         self.api_key = config.get('api_key', '')
         self.secret_key = config.get('secret_key', '')
         self.passphrase = config.get('passphrase', '')
         self.sandbox = config.get('sandbox', True)
-        self.timeout = config.get('timeout_seconds', 30)
+        self.timeout = exchange_config.timeout_seconds
         
         # Use demo environment if sandbox
         if self.sandbox:
-            self.REST_BASE_URL = "https://api.bitgetapi.com"  # Demo URL
+            self.REST_BASE_URL = exchange_config.demo_rest_url
         
         # HTTP client
         self.http_client: Optional[httpx.AsyncClient] = None
@@ -85,11 +90,15 @@ class BitgetEnhancedAdapter(ExchangeAdapter):
         try:
             self.status = ConnectionStatus.CONNECTING
             
-            # Initialize HTTP client
+            # Initialize HTTP client using exchange config
+            exchange_config = get_exchange_config('bitget')
             self.http_client = httpx.AsyncClient(
                 base_url=self.REST_BASE_URL,
                 timeout=self.timeout,
-                limits=httpx.Limits(max_connections=20, max_keepalive_connections=10)
+                limits=httpx.Limits(
+                    max_connections=exchange_config.max_connections,
+                    max_keepalive_connections=exchange_config.max_keepalive_connections
+                )
             )
             
             # Test connection

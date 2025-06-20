@@ -8,6 +8,7 @@ from typing import Optional, Dict, Any
 
 from .base import Strategy, StrategyConfig
 from ..domains.market import MarketFrame, Signal, SignalType
+from ..settings import get_strategy_config
 
 
 class WeekendEffectStrategy(Strategy):
@@ -20,18 +21,24 @@ class WeekendEffectStrategy(Strategy):
     
     def __init__(self, config: StrategyConfig):
         super().__init__(config)
+        # Load strategy-specific settings
+        self.strategy_settings = get_strategy_config('weekend_effect')
     
     def validate_config(self) -> None:
         """Validate strategy configuration"""
         required_params = []  # No additional params required for basic weekend effect
         
-        # Optional parameters with defaults
-        self.params.setdefault('enable_friday_buy', True)
-        self.params.setdefault('enable_monday_sell', True)
-        self.params.setdefault('friday_entry_hour', 23)  # UTC hour
-        self.params.setdefault('monday_exit_hour', 1)    # UTC hour
-        self.params.setdefault('max_position_hours', 60)  # Max hold time
-        self.params.setdefault('min_volatility', 0.001)   # Min volatility to trade
+        # Load parameters from settings with fallbacks to config params
+        self.params.setdefault('enable_friday_buy', getattr(self.strategy_settings, 'enable_friday_buy', True))
+        self.params.setdefault('enable_monday_sell', getattr(self.strategy_settings, 'enable_monday_sell', True))
+        self.params.setdefault('friday_entry_hour', getattr(self.strategy_settings, 'friday_entry_hour', 23))
+        self.params.setdefault('monday_exit_hour', getattr(self.strategy_settings, 'monday_exit_hour', 1))
+        self.params.setdefault('max_position_hours', getattr(self.strategy_settings, 'max_position_hours', 60))
+        self.params.setdefault('min_volatility', getattr(self.strategy_settings, 'min_volatility', 0.001))
+        self.params.setdefault('confidence', getattr(self.strategy_settings, 'confidence', 0.7))
+        self.params.setdefault('target_size', getattr(self.strategy_settings, 'target_size', 0.05))
+        self.params.setdefault('stop_loss_pct', getattr(self.strategy_settings, 'stop_loss_pct', 2.0))
+        self.params.setdefault('take_profit_pct', getattr(self.strategy_settings, 'take_profit_pct', 1.5))
         
         # Validate ranges
         if not (0 <= self.params['friday_entry_hour'] <= 23):
@@ -80,11 +87,11 @@ class WeekendEffectStrategy(Strategy):
             return Signal(
                 symbol=market_data.symbol,
                 signal_type=SignalType.BUY,
-                confidence=0.7,  # Moderate confidence for calendar effect
-                target_size=0.05,  # 5% position size
+                confidence=self.params['confidence'],
+                target_size=self.params['target_size'],
                 entry_price=market_data.current_price,
-                stop_loss=market_data.current_price * 0.98,  # 2% stop loss
-                take_profit=market_data.current_price * 1.015,  # 1.5% take profit
+                stop_loss=market_data.current_price * (1 - self.params['stop_loss_pct'] / 100),
+                take_profit=market_data.current_price * (1 + self.params['take_profit_pct'] / 100),
                 timeframe="1h",
                 strategy_id="WKND_EFF",
                 reasoning=f"Weekend effect: Friday {hour:02d}:00 UTC entry signal",
@@ -105,7 +112,7 @@ class WeekendEffectStrategy(Strategy):
             return Signal(
                 symbol=market_data.symbol,
                 signal_type=SignalType.SELL,
-                confidence=0.8,  # Higher confidence for exit
+                confidence=min(0.9, self.params['confidence'] + 0.1),  # Higher confidence for exit
                 target_size=1.0,  # Close full position
                 entry_price=market_data.current_price,
                 timeframe="1h",

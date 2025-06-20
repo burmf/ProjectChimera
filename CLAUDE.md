@@ -711,3 +711,47 @@ Default: `kelly_frac=0.5`, `target_vol=1%/day`.
 > **TL;DR**: *Small pieces, clear contracts, observable behaviour, and safety rails—then add alpha.*
 
 ---
+# Project Chimera – Bitget Alpha-Stack v1.0 Design Doc
+© 2025 burmf │ Last update: 2025-06-19
+
+---
+
+## 0. Design Philosophy 🔑
+> **“Survive first, compound later.”**  
+> 小資金を守りながら指数成長させるための 8 原則
+
+| # | 原則 | 実践ポイント |
+|---|------|--------------|
+| 1 | **Single Responsibility** | モジュールは「Feed / Strategy / Risk / Execution / Monitor」の 5 層のみ |
+| 2 | **Async-First** | すべての I/O (`httpx`, `websockets`) は *await*。同期はラップ禁止 |
+| 3 | **Config over Code** | 全閾値・キーは `settings.yaml` → pydantic `Settings` |
+| 4 | **Fail-Fast / Safe-Fail** | WS/REST 失敗は `tenacity` 再試行、3 連続失敗で CircuitBreaker |
+| 5 | **Risk > Alpha** | Dyn-Kelly・ATR・MaxDD ガードを最優先で通過するサイズのみ発注 |
+| 6 | **Observability** | JSON Log + Prometheus → Grafana、CI でも `/metrics` スクレイプ |
+| 7 | **Test Small, Test Often** | pytest カバレッジ 60 % 以上、 PR ごとに赤→緑→リファクタ |
+| 8 | **Readability > Cleverness** | 可読性を最優先。3 ヶ月後の自分（新卒 1 年目でも）理解可能に |
+
+---
+
+## 1. High-Level Goal
+150 k JPY の口座を **月利 8–12 % / MaxDD ≤ 15 %** で複利運用できる  
+Bitget 専用の短期アルファ自動売買ボットを完成させる。
+
+---
+
+## 2. Architecture (v1.0)
+
+```mermaid
+graph TD
+  subgraph Data
+    WS[Bitget WebSocket<br/> books / trade / funding / OI]
+    REST[Bitget REST<br/> candles 1m, funding hist]
+  end
+  WS -->|MarketFrame| Hub(StrategyHub ⭐7)
+  REST --> Hub
+  Hub --> Risk(RiskEngine: Dyn-Kelly<br/>+ ATR + DD Guard)
+  Risk --> Exec(Execution<br/>Bitget REST order)
+  Exec --> FillDB[(Postgres Fills)]
+  Exec --> Log
+  Log --> Prom[Prometheus Exporter]
+  UI(Streamlit Dash) --> Hub

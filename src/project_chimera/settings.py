@@ -3,12 +3,59 @@ Configuration management with Pydantic Settings
 Supports environment variables and YAML configuration files
 """
 
-from typing import List, Optional, Literal, Dict
+from typing import List, Optional, Literal, Dict, Any
 from pathlib import Path
 from pydantic import BaseModel, Field, SecretStr, AnyUrl, field_validator
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
 import os
+import yaml
+
+
+class StrategyConfig(BaseModel):
+    """Individual strategy configuration"""
+    enabled: bool = Field(default=True, description="Enable/disable strategy")
+    confidence: float = Field(default=0.7, ge=0, le=1, description="Base confidence level")
+    target_size: float = Field(default=0.05, gt=0, le=1, description="Target position size %")
+    stop_loss_pct: float = Field(default=2.0, gt=0, description="Stop loss percentage")
+    take_profit_pct: float = Field(default=2.0, gt=0, description="Take profit percentage")
+    confidence_base: float = Field(default=0.6, ge=0, le=1, description="Base confidence for calculations")
+    # Allow arbitrary fields for strategy-specific parameters
+    model_config = {"extra": "allow"}
+
+
+class StrategiesConfig(BaseModel):
+    """All strategy configurations"""
+    weekend_effect: StrategyConfig = Field(default_factory=StrategyConfig)
+    stop_reversion: StrategyConfig = Field(default_factory=StrategyConfig)
+    funding_contrarian: StrategyConfig = Field(default_factory=StrategyConfig)
+    volume_breakout: StrategyConfig = Field(default_factory=StrategyConfig)
+    cme_gap: StrategyConfig = Field(default_factory=StrategyConfig)
+    basis_arbitrage: StrategyConfig = Field(default_factory=StrategyConfig)
+    lob_reversion: StrategyConfig = Field(default_factory=StrategyConfig)
+    
+    def get_strategy_config(self, strategy_name: str) -> StrategyConfig:
+        """Get configuration for a specific strategy"""
+        return getattr(self, strategy_name, StrategyConfig())
+
+
+class ExchangeAdapterConfig(BaseModel):
+    """Exchange adapter configuration"""
+    spot_ws_url: str = Field(default="wss://ws.bitget.com/spot/v1/stream")
+    mix_ws_url: str = Field(default="wss://ws.bitget.com/mix/v1/stream")
+    rest_base_url: str = Field(default="https://api.bitget.com")
+    demo_rest_url: str = Field(default="https://api.bitgetapi.com")
+    timeout_seconds: int = Field(default=30, ge=5)
+    max_connections: int = Field(default=20, ge=1)
+    max_keepalive_connections: int = Field(default=10, ge=1)
+    reconnect_delay: int = Field(default=5, ge=1)
+    max_reconnect_attempts: int = Field(default=5, ge=1)
+    heartbeat_interval: int = Field(default=30, ge=10)
+
+
+class ExchangeAdaptersConfig(BaseModel):
+    """All exchange adapter configurations"""
+    bitget: ExchangeAdapterConfig = Field(default_factory=ExchangeAdapterConfig)
 
 
 class TradingConfig(BaseModel):
@@ -50,16 +97,33 @@ class RiskConfig(BaseModel):
     
     # Kelly criterion and sizing
     kelly_fraction: float = Field(default=0.25, ge=0, le=1, description="Kelly criterion fraction")
+    kelly_base_fraction: float = Field(default=0.5, ge=0, le=1, description="Kelly base fraction (½-Kelly)")
+    kelly_ewma_alpha: float = Field(default=0.1, gt=0, le=1, description="EWMA decay for Kelly")
+    kelly_min_trades: int = Field(default=20, ge=1, description="Min trades for Kelly calculation")
     target_vol_daily: float = Field(default=0.01, gt=0, description="Target daily volatility (1%)")
     
     # ATR and volatility parameters
+    atr_target_daily_vol: float = Field(default=0.01, gt=0, description="ATR target daily volatility")
+    atr_periods: int = Field(default=14, ge=5, description="ATR calculation periods")
     atr_lookback: int = Field(default=14, ge=5, description="ATR calculation lookback periods")
     atr_multiplier: float = Field(default=2.0, gt=0, description="ATR stop multiplier")
+    atr_min_position: float = Field(default=0.01, gt=0, le=1, description="ATR min position size")
+    atr_max_position: float = Field(default=0.20, gt=0, le=1, description="ATR max position size")
     
     # Drawdown guard parameters
+    dd_caution_threshold: float = Field(default=0.05, gt=0, le=1, description="DD caution threshold (5%)")
+    dd_warning_threshold: float = Field(default=0.10, gt=0, le=1, description="DD warning threshold (10%)")
+    dd_critical_threshold: float = Field(default=0.20, gt=0, le=1, description="DD critical threshold (20%)")
     dd_reduction_10pct: float = Field(default=0.5, gt=0, le=1, description="Size reduction at 10% DD")
     dd_pause_20pct: bool = Field(default=True, description="Pause trading at 20% DD")
     dd_pause_duration_hours: int = Field(default=24, ge=1, description="Pause duration in hours")
+    dd_warning_cooldown_hours: float = Field(default=4.0, gt=0, description="Warning cooldown hours")
+    dd_critical_cooldown_hours: float = Field(default=24.0, gt=0, description="Critical cooldown hours")
+    
+    # Engine limits
+    max_leverage: float = Field(default=10.0, gt=1, description="Maximum leverage allowed")
+    min_confidence: float = Field(default=0.3, ge=0, le=1, description="Minimum confidence to trade")
+    max_portfolio_vol: float = Field(default=0.02, gt=0, description="Max portfolio volatility")
     
     # VaR and risk metrics
     var_confidence: float = Field(default=0.95, ge=0.9, le=0.99, description="VaR confidence level")
@@ -70,9 +134,9 @@ class APIConfig(BaseModel):
     """API configuration - unified for all exchange integrations"""
     
     # Bitget API credentials
-    bitget_key: SecretStr = Field(description="Bitget API key")
-    bitget_secret: SecretStr = Field(description="Bitget secret key")
-    bitget_passphrase: SecretStr = Field(description="Bitget passphrase")
+    bitget_key: SecretStr = Field(default=SecretStr(""), description="Bitget API key")
+    bitget_secret: SecretStr = Field(default=SecretStr(""), description="Bitget secret key")
+    bitget_passphrase: SecretStr = Field(default=SecretStr(""), description="Bitget passphrase")
     bitget_sandbox: bool = Field(default=True, description="Use sandbox environment")
     
     # Bitget URLs - configurable for sandbox/production
@@ -176,18 +240,25 @@ class Settings(BaseSettings):
     ))
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
     monitoring: MonitoringConfig = Field(default_factory=MonitoringConfig)
+    strategies: StrategiesConfig = Field(default_factory=StrategiesConfig)
+    exchange_adapters: ExchangeAdaptersConfig = Field(default_factory=ExchangeAdaptersConfig)
     
     # Paths
     data_dir: Path = Field(default=Path("data"), description="Data directory")
     logs_dir: Path = Field(default=Path("logs"), description="Logs directory")
     
-    model_config = {
-        "env_file": ".env",
-        "env_nested_delimiter": "__", 
-        "case_sensitive": False,
-        "extra": "ignore",
-        "yaml_file": "config.{env}.yaml"
-    }
+    # Sub-configurations - enhanced with strategies
+    strategies: StrategiesConfig = Field(default_factory=StrategiesConfig)
+    exchange_adapters: ExchangeAdaptersConfig = Field(default_factory=ExchangeAdaptersConfig)
+    
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_nested_delimiter="__", 
+        case_sensitive=False,
+        extra="ignore",
+        yaml_file="config.{env}.yaml",
+        yaml_file_encoding="utf-8"
+    )
     
     @field_validator("database_url", mode='before')
     @classmethod
@@ -198,10 +269,58 @@ class Settings(BaseSettings):
         return v
 
 
+def load_yaml_config(env: str = "dev") -> Dict[str, Any]:
+    """
+    Load YAML configuration file based on environment
+    """
+    config_file = Path(f"config.{env}.yaml")
+    if not config_file.exists():
+        # Try alternative locations
+        alt_paths = [
+            Path(f"../config.{env}.yaml"),
+            Path(f"../../config.{env}.yaml"),
+            Path(f"/app/config.{env}.yaml")
+        ]
+        for alt_path in alt_paths:
+            if alt_path.exists():
+                config_file = alt_path
+                break
+        else:
+            # Return empty dict if no config file found
+            return {}
+    
+    try:
+        with open(config_file, 'r', encoding='utf-8') as f:
+            return yaml.safe_load(f) or {}
+    except Exception as e:
+        print(f"Warning: Could not load {config_file}: {e}")
+        return {}
+
+
 @lru_cache()
 def get_settings() -> Settings:
     """
     Get cached settings instance
-    Thread-safe singleton pattern
+    Thread-safe singleton pattern with YAML config support
     """
-    return Settings()
+    env = os.getenv("ENV", "dev")
+    yaml_config = load_yaml_config(env)
+    
+    # Merge YAML config with environment variables
+    return Settings(**yaml_config)
+
+
+def get_strategy_config(strategy_name: str) -> StrategyConfig:
+    """
+    Get configuration for a specific strategy
+    """
+    settings = get_settings()
+    return settings.strategies.get_strategy_config(strategy_name)
+
+
+def get_exchange_config(exchange_name: str = "bitget") -> ExchangeAdapterConfig:
+    """
+    Get configuration for exchange adapter
+    """
+    settings = get_settings()
+    return getattr(settings.exchange_adapters, exchange_name, ExchangeAdapterConfig())

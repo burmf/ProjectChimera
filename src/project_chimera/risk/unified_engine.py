@@ -12,6 +12,7 @@ from .dyn_kelly import DynamicKellyCalculator, DynamicKellyConfig, DynamicKellyR
 from .atr_target import ATRTargetController, ATRTargetConfig, ATRTargetResult
 from .dd_guard import DDGuardSystem, DDGuardConfig, DDGuardState, DDGuardTier
 from ..domains.market import OHLCV, Signal
+from ..settings import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +42,30 @@ class UnifiedRiskConfig:
     max_leverage: float = 10.0            # Maximum leverage allowed
     min_confidence: float = 0.3           # Minimum confidence to trade
     max_portfolio_vol: float = 0.02       # Max portfolio volatility (2%)
+    
+    @classmethod
+    def from_settings(cls) -> 'UnifiedRiskConfig':
+        """Create config from application settings"""
+        settings = get_settings()
+        risk_config = settings.risk
+        
+        return cls(
+            kelly_base_fraction=risk_config.kelly_base_fraction,
+            kelly_ewma_alpha=risk_config.kelly_ewma_alpha,
+            kelly_min_trades=risk_config.kelly_min_trades,
+            atr_target_daily_vol=risk_config.atr_target_daily_vol,
+            atr_periods=risk_config.atr_periods,
+            atr_min_position=risk_config.atr_min_position,
+            atr_max_position=risk_config.atr_max_position,
+            dd_caution_threshold=risk_config.dd_caution_threshold,
+            dd_warning_threshold=risk_config.dd_warning_threshold,
+            dd_critical_threshold=risk_config.dd_critical_threshold,
+            dd_warning_cooldown_hours=risk_config.dd_warning_cooldown_hours,
+            dd_critical_cooldown_hours=risk_config.dd_critical_cooldown_hours,
+            max_leverage=risk_config.max_leverage,
+            min_confidence=risk_config.min_confidence,
+            max_portfolio_vol=risk_config.max_portfolio_vol
+        )
 
 
 @dataclass
@@ -94,7 +119,7 @@ class UnifiedRiskEngine:
     """
     
     def __init__(self, config: Optional[UnifiedRiskConfig] = None, initial_equity: float = 1.0):
-        self.config = config or UnifiedRiskConfig()
+        self.config = config or UnifiedRiskConfig.from_settings()
         
         # Initialize risk components
         kelly_config = DynamicKellyConfig(

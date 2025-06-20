@@ -9,6 +9,7 @@ import statistics
 
 from .base import TechnicalStrategy, StrategyConfig
 from ..domains.market import MarketFrame, Signal, SignalType
+from ..settings import get_strategy_config
 
 
 class StopReversionStrategy(TechnicalStrategy):
@@ -21,18 +22,23 @@ class StopReversionStrategy(TechnicalStrategy):
     
     def __init__(self, config: StrategyConfig):
         super().__init__(config)
+        # Load strategy-specific settings
+        self.strategy_settings = get_strategy_config('stop_reversion')
     
     def validate_config(self) -> None:
         """Validate strategy configuration"""
-        # Set default parameters
-        self.params.setdefault('min_price_drop_pct', 3.0)  # Minimum price drop %
-        self.params.setdefault('min_volume_multiplier', 3.0)  # Volume spike multiplier
-        self.params.setdefault('lookback_periods', 20)  # Periods for volume baseline
-        self.params.setdefault('timeframe', '5m')  # Target timeframe
-        self.params.setdefault('max_position_minutes', 60)  # Max hold time
-        self.params.setdefault('stop_loss_pct', 2.0)  # Stop loss %
-        self.params.setdefault('take_profit_pct', 4.0)  # Take profit %
-        self.params.setdefault('min_price_level', 0.01)  # Min price to avoid low caps
+        # Load parameters from settings with fallbacks
+        self.params.setdefault('min_price_drop_pct', getattr(self.strategy_settings, 'min_price_drop_pct', 3.0))
+        self.params.setdefault('min_volume_multiplier', getattr(self.strategy_settings, 'min_volume_multiplier', 3.0))
+        self.params.setdefault('lookback_periods', getattr(self.strategy_settings, 'lookback_periods', 20))
+        self.params.setdefault('timeframe', getattr(self.strategy_settings, 'timeframe', '5m'))
+        self.params.setdefault('max_position_minutes', getattr(self.strategy_settings, 'max_position_minutes', 60))
+        self.params.setdefault('stop_loss_pct', getattr(self.strategy_settings, 'stop_loss_pct', 2.0))
+        self.params.setdefault('take_profit_pct', getattr(self.strategy_settings, 'take_profit_pct', 4.0))
+        self.params.setdefault('min_price_level', getattr(self.strategy_settings, 'min_price_level', 0.01))
+        self.params.setdefault('confidence_base', getattr(self.strategy_settings, 'confidence_base', 0.5))
+        self.params.setdefault('target_size', getattr(self.strategy_settings, 'target_size', 0.03))
+        self.params.setdefault('rsi_oversold', getattr(self.strategy_settings, 'rsi_oversold', 30))
         
         # Validate ranges
         if self.params['min_price_drop_pct'] <= 0:
@@ -76,7 +82,7 @@ class StopReversionStrategy(TechnicalStrategy):
         # Additional confirmation: RSI oversold
         prices = [float(c.close) for c in candles[-20:]]
         rsi = self.calculate_rsi(prices, 14)
-        if rsi is None or rsi > 30:  # Only trade if oversold
+        if rsi is None or rsi > self.params['rsi_oversold']:  # Only trade if oversold
             return None
         
         # Check if we're at a potential support level
@@ -85,8 +91,8 @@ class StopReversionStrategy(TechnicalStrategy):
         return Signal(
             symbol=market_data.symbol,
             signal_type=SignalType.BUY,
-            confidence=min(0.8, 0.5 + (price_drop_pct / 10) + (volume_multiplier / 10) + (support_strength / 5)),
-            target_size=0.03,  # 3% position size
+            confidence=min(0.8, self.params['confidence_base'] + (price_drop_pct / 10) + (volume_multiplier / 10) + (support_strength / 5)),
+            target_size=self.params['target_size'],
             entry_price=market_data.current_price,
             stop_loss=market_data.current_price * (1 - self.params['stop_loss_pct'] / 100),
             take_profit=market_data.current_price * (1 + self.params['take_profit_pct'] / 100),

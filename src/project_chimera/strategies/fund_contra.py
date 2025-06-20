@@ -9,6 +9,7 @@ import statistics
 
 from .base import Strategy, StrategyConfig
 from ..domains.market import MarketFrame, Signal, SignalType
+from ..settings import get_strategy_config
 
 
 class FundingContraStrategy(Strategy):
@@ -21,18 +22,22 @@ class FundingContraStrategy(Strategy):
     
     def __init__(self, config: StrategyConfig):
         super().__init__(config)
+        # Load strategy-specific settings
+        self.strategy_settings = get_strategy_config('funding_contrarian')
     
     def validate_config(self) -> None:
         """Validate strategy configuration"""
-        # Set default parameters
-        self.params.setdefault('funding_threshold_pct', 0.03)  # ±0.03% funding threshold
-        self.params.setdefault('oi_spike_multiplier', 2.0)  # OI spike multiplier
-        self.params.setdefault('lookback_periods', 24)  # Periods for OI baseline (hours)
-        self.params.setdefault('min_funding_history', 8)  # Min funding rate history
-        self.params.setdefault('max_position_hours', 8)  # Max hold time (until next funding)
-        self.params.setdefault('stop_loss_pct', 1.5)  # Stop loss %
-        self.params.setdefault('take_profit_pct', 2.0)  # Take profit %
-        self.params.setdefault('funding_momentum_periods', 3)  # Periods to check funding trend
+        # Load parameters from settings with fallbacks
+        self.params.setdefault('funding_threshold_pct', getattr(self.strategy_settings, 'funding_threshold_pct', 0.03))
+        self.params.setdefault('oi_spike_multiplier', getattr(self.strategy_settings, 'oi_spike_multiplier', 2.0))
+        self.params.setdefault('lookback_periods', getattr(self.strategy_settings, 'lookback_periods', 24))
+        self.params.setdefault('min_funding_history', getattr(self.strategy_settings, 'min_funding_history', 8))
+        self.params.setdefault('max_position_hours', getattr(self.strategy_settings, 'max_position_hours', 8))
+        self.params.setdefault('stop_loss_pct', getattr(self.strategy_settings, 'stop_loss_pct', 1.5))
+        self.params.setdefault('take_profit_pct', getattr(self.strategy_settings, 'take_profit_pct', 2.0))
+        self.params.setdefault('funding_momentum_periods', getattr(self.strategy_settings, 'funding_momentum_periods', 3))
+        self.params.setdefault('confidence_base', getattr(self.strategy_settings, 'confidence_base', 0.6))
+        self.params.setdefault('target_size', getattr(self.strategy_settings, 'target_size', 0.04))
         
         # Validate ranges
         if self.params['funding_threshold_pct'] <= 0:
@@ -95,7 +100,7 @@ class FundingContraStrategy(Strategy):
         
         # Calculate confidence based on funding extremity and OI spike
         funding_extremity = abs(current_funding) / (self.params['funding_threshold_pct'] / 100)
-        confidence = min(0.9, 0.6 + (funding_extremity - 1) * 0.1 + (oi_spike - 2) * 0.05)
+        confidence = min(0.9, self.params['confidence_base'] + (funding_extremity - 1) * 0.1 + (oi_spike - 2) * 0.05)
         
         # Adjust stop/take based on signal direction
         if signal_type == SignalType.BUY:
@@ -109,7 +114,7 @@ class FundingContraStrategy(Strategy):
             symbol=market_data.symbol,
             signal_type=signal_type,
             confidence=confidence,
-            target_size=0.04,  # 4% position size
+            target_size=self.params['target_size'],
             entry_price=market_data.current_price,
             stop_loss=stop_loss,
             take_profit=take_profit,

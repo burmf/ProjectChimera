@@ -1,0 +1,226 @@
+# ProjectChimera Development Configuration
+# All magic numbers centralized here per CFG-01 requirements
+
+# Environment settings
+env: "dev"
+debug: true
+
+# Database configuration
+database_url: "postgresql+asyncpg://chimera:chimera@localhost:5432/chimera"
+
+# Data storage paths
+data_dir: "data"
+logs_dir: "logs"
+
+# Trading configuration
+trading:
+  # Core trading parameters
+  leverage_default: 25.0
+  leverage_max: 75.0
+  max_position_pct: 0.3
+  position_size_usd: 40000
+  max_positions: 8
+  
+  # Risk management
+  profit_target: 0.006
+  stop_loss: 0.002
+  daily_target: 800
+  
+  # AI parameters
+  confidence_threshold: 0.7
+  momentum_threshold: 0.0006
+  volatility_min: 0.0008
+  
+  # Trading pairs
+  trading_pairs: ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
+  
+  # Timing
+  position_timeout_minutes: 3
+  update_interval_seconds: 1
+
+# Risk management configuration
+risk:
+  # Portfolio-level limits
+  max_portfolio_risk: 0.15
+  max_daily_loss: 0.05
+  max_drawdown: 0.10
+  max_correlation: 0.7
+  
+  # Kelly criterion
+  kelly_base_fraction: 0.5
+  kelly_ewma_alpha: 0.1
+  kelly_min_trades: 20
+  kelly_fraction: 0.25
+  
+  # ATR target volatility
+  target_vol_daily: 0.01
+  atr_target_daily_vol: 0.01
+  atr_periods: 14
+  atr_multiplier: 2.0
+  atr_lookback: 14
+  atr_min_position: 0.01
+  atr_max_position: 0.20
+  
+  # Drawdown guard
+  dd_caution_threshold: 0.05
+  dd_warning_threshold: 0.10
+  dd_critical_threshold: 0.20
+  dd_reduction_10pct: 0.5
+  dd_pause_20pct: true
+  dd_pause_duration_hours: 24
+  dd_warning_cooldown_hours: 4.0
+  dd_critical_cooldown_hours: 24.0
+  
+  # VaR and risk metrics
+  var_confidence: 0.95
+  var_lookback: 50
+  
+  # Engine limits
+  max_leverage: 10.0
+  min_confidence: 0.3
+  max_portfolio_vol: 0.02
+
+# API configuration
+api:
+  # Bitget API settings
+  bitget_sandbox: true
+  bitget_rest_url: "https://api.bitget.com"
+  bitget_ws_spot_url: "wss://ws.bitget.com/spot/v1/stream"
+  bitget_ws_mix_url: "wss://ws.bitget.com/mix/v1/stream"
+  
+  # Connection settings
+  timeout_seconds: 30
+  max_retries: 3
+  retry_delay: 1.0
+  rate_limit_delay: 0.05
+  
+  # WebSocket settings
+  ws_heartbeat: 30
+  ws_reconnect_delay: 5
+  ws_max_reconnect_attempts: 5
+  
+  # OpenAI settings
+  openai_model: "gpt-4"
+
+# Strategy-specific parameters
+strategies:
+  # Weekend Effect Strategy (WKND_EFF)
+  weekend_effect:
+    enabled: true
+    enable_friday_buy: true
+    enable_monday_sell: true
+    friday_entry_hour: 23
+    monday_exit_hour: 1
+    max_position_hours: 60
+    min_volatility: 0.001
+    confidence: 0.7
+    target_size: 0.05
+    stop_loss_pct: 2.0
+    take_profit_pct: 1.5
+  
+  # Stop Loss Reversion Strategy (STOP_REV)
+  stop_reversion:
+    enabled: true
+    min_price_drop_pct: 3.0
+    min_volume_multiplier: 3.0
+    lookback_periods: 20
+    timeframe: "5m"
+    max_position_minutes: 60
+    stop_loss_pct: 2.0
+    take_profit_pct: 4.0
+    min_price_level: 0.01
+    confidence_base: 0.5
+    target_size: 0.03
+    rsi_oversold: 30
+  
+  # Funding Rate Contrarian Strategy (FUND_CONTRA)
+  funding_contrarian:
+    enabled: true
+    funding_threshold_pct: 0.03
+    oi_spike_multiplier: 2.0
+    lookback_periods: 24
+    min_funding_history: 8
+    max_position_hours: 8
+    stop_loss_pct: 1.5
+    take_profit_pct: 2.0
+    funding_momentum_periods: 3
+    confidence_base: 0.6
+    target_size: 0.04
+  
+  # Volume Breakout Strategy (VOL_BRK)
+  volume_breakout:
+    enabled: true
+    bb_period: 20
+    bb_multiplier: 2.0
+    squeeze_threshold: 0.1
+    breakout_threshold_pct: 2.0
+    volume_multiplier: 2.0
+    confidence_base: 0.75
+    target_size: 0.05
+    stop_loss_pct: 1.0
+    take_profit_pct: 3.0
+  
+  # CME Gap Strategy (CME_GAP)
+  cme_gap:
+    enabled: true
+    min_gap_pct: 0.5
+    max_gap_pct: 5.0
+    gap_fill_timeout_hours: 24
+    confidence_base: 0.8
+    target_size: 0.04
+    stop_loss_pct: 2.0
+  
+  # Basis Arbitrage Strategy (BASIS_ARB)
+  basis_arbitrage:
+    enabled: true
+    min_basis_pct: 0.5
+    max_basis_pct: 3.0
+    funding_period_hours: 8
+    confidence_base: 0.9
+    target_size: 0.06
+    stop_loss_pct: 1.0
+  
+  # LOB Reversion Strategy (LOB_REV)
+  lob_reversion:
+    enabled: true
+    rsi_overbought: 70
+    rsi_oversold: 30
+    orderflow_threshold: 2.0
+    confidence_base: 0.65
+    target_size: 0.03
+    stop_loss_pct: 1.5
+    take_profit_pct: 2.5
+
+# Logging configuration
+logging:
+  level: "INFO"
+  format: "{time:YYYY-MM-DD HH:mm:ss} | {level} | {name}:{function}:{line} | {message}"
+  rotation: "100 MB"
+  retention: "30 days"
+  sanitize_keys: ["api_key", "secret", "passphrase", "token", "password"]
+
+# Monitoring configuration
+monitoring:
+  health_port: 8000
+  health_path: "/health"
+  prometheus_enabled: true
+  prometheus_port: 8001
+  prometheus_path: "/metrics"
+  track_latency: true
+  track_execution_time: true
+  ws_latency_threshold_ms: 100.0
+  execution_time_threshold_ms: 50.0
+
+# Exchange adapter settings
+exchange_adapters:
+  bitget:
+    spot_ws_url: "wss://ws.bitget.com/spot/v1/stream"
+    mix_ws_url: "wss://ws.bitget.com/mix/v1/stream"
+    rest_base_url: "https://api.bitget.com"
+    demo_rest_url: "https://api.bitgetapi.com"
+    timeout_seconds: 30
+    max_connections: 20
+    max_keepalive_connections: 10
+    reconnect_delay: 5
+    max_reconnect_attempts: 5
+    heartbeat_interval: 30

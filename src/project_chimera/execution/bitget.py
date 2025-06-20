@@ -17,6 +17,8 @@ from dataclasses import dataclass, asdict
 from enum import Enum
 import traceback
 
+from ..settings import get_settings
+
 # Mock aiohttp and websockets for systems without these packages
 try:
     import aiohttp
@@ -67,11 +69,32 @@ class BitgetConfig:
     sandbox: bool = True
     base_url: str = "https://api.bitget.com"
     ws_url: str = "wss://ws.bitget.com/spot/v1/stream"
+    timeout_seconds: int = 30
+    max_retries: int = 3
+    retry_delay: float = 1.0
     
     def __post_init__(self):
         if self.sandbox:
             self.base_url = "https://api.bitget.com"  # Bitget uses same URL for sandbox
             self.ws_url = "wss://ws.bitget.com/spot/v1/stream"
+    
+    @classmethod
+    def from_settings(cls) -> 'BitgetConfig':
+        """Create config from application settings"""
+        settings = get_settings()
+        api_config = settings.api
+        
+        return cls(
+            api_key=api_config.bitget_key.get_secret_value(),
+            secret_key=api_config.bitget_secret.get_secret_value(),
+            passphrase=api_config.bitget_passphrase.get_secret_value(),
+            sandbox=api_config.bitget_sandbox,
+            base_url=api_config.bitget_rest_url,
+            ws_url=api_config.bitget_ws_spot_url,
+            timeout_seconds=api_config.timeout_seconds,
+            max_retries=api_config.max_retries,
+            retry_delay=api_config.retry_delay
+        )
 
 
 @dataclass
