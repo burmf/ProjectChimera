@@ -114,6 +114,17 @@ class TechnicalStrategy(Strategy):
         self.technical_analyzer = TechnicalAnalyzer()
         self._price_history = []
         self._indicators_cache = {}
+        
+        # パフォーマンス測定の初期化
+        from .performance_mixin import PerformanceMixin
+        if not isinstance(self, PerformanceMixin):
+            # ミックスインの機能を動的に追加
+            self.performance_logger = None
+            try:
+                from ..monitor.performance_logger import get_performance_logger
+                self.performance_logger = get_performance_logger()
+            except:
+                pass
     
     def update_price_history(self, market_data: MarketFrame) -> None:
         """Update price history for technical analysis"""
