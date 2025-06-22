@@ -299,7 +299,8 @@ class BitgetMarketDataService:
     async def get_market_overview(self, symbols: List[str] = None) -> Dict[str, Any]:
         """Get comprehensive market overview"""
         if symbols is None:
-            symbols = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'ADAUSDT', 'DOTUSDT']
+            # Use Bitget's actual symbol format with _SPBL suffix for spot trading
+            symbols = ['BTCUSDT_SPBL', 'ETHUSDT_SPBL', 'BNBUSDT_SPBL', 'ADAUSDT_SPBL', 'DOTUSDT_SPBL']
         
         try:
             # Get ticker data for multiple symbols

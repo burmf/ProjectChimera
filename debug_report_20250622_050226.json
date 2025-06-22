@@ -1,0 +1,81 @@
+{
+  "timestamp": "2025-06-22T05:02:26.404478",
+  "system_info": {
+    "python_version": "3.13.5 (main, Jun 18 2025, 13:25:24) [GCC 11.5.0 20240719 (Red Hat 11.5.0-5)]",
+    "project_root": "/home/ec2-user/ProjectChimera",
+    "working_directory": "/home/ec2-user/ProjectChimera"
+  },
+  "issues": [
+    {
+      "level": "CRITICAL",
+      "component": "PerformanceTracker",
+      "issue": "Tracker not loading database data correctly",
+      "details": "",
+      "timestamp": "2025-06-22 05:02:24.041701"
+    },
+    {
+      "level": "WARNING",
+      "component": "DataFlow",
+      "issue": "Database shows 30 trades but tracker shows 60",
+      "details": "",
+      "timestamp": "2025-06-22 05:02:26.259693"
+    },
+    {
+      "level": "CRITICAL",
+      "component": "DataFlow",
+      "issue": "Could not synchronize tracker with database",
+      "details": "",
+      "timestamp": "2025-06-22 05:02:26.310101"
+    }
+  ],
+  "fixes_applied": [
+    {
+      "component": "Database",
+      "fix": "Database integrity check passed: 45 trades, 7 strategies",
+      "timestamp": "2025-06-22 05:02:21.350505"
+    },
+    {
+      "component": "PerformanceTracker",
+      "fix": "Successfully reloaded historical data",
+      "timestamp": "2025-06-22 05:02:24.091009"
+    },
+    {
+      "component": "PerformanceTracker",
+      "fix": "Performance tracker debugging completed",
+      "timestamp": "2025-06-22 05:02:24.091021"
+    },
+    {
+      "component": "BitgetAPI",
+      "fix": "Implemented fallback to demo mode for development",
+      "timestamp": "2025-06-22 05:02:25.586513"
+    },
+    {
+      "component": "Dashboard",
+      "fix": "Dashboard integration testing completed",
+      "timestamp": "2025-06-22 05:02:26.258822"
+    },
+    {
+      "component": "DataFlow",
+      "fix": "Data flow consistency check completed",
+      "timestamp": "2025-06-22 05:02:26.310105"
+    },
+    {
+      "component": "PerformanceTracker",
+      "fix": "Force reloaded and recalculated all data",
+      "timestamp": "2025-06-22 05:02:26.404448"
+    }
+  ],
+  "warnings": [
+    {
+      "component": "BitgetAPI",
+      "warning": "API endpoints returning 400 errors, using demo mode with mock data",
+      "timestamp": "2025-06-22 05:02:25.586506"
+    }
+  ],
+  "summary": {
+    "total_issues": 3,
+    "critical_issues": 2,
+    "warnings": 1,
+    "fixes_applied": 7
+  }
+}

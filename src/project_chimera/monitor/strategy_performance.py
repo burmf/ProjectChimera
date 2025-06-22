@@ -185,13 +185,16 @@ class StrategyPerformanceTracker:
         # Initialize database
         self._init_database()
         
-        # Load existing data (handle asyncio properly)
+        # Load existing data immediately (use sync method for reliability)
         try:
-            loop = asyncio.get_running_loop()
-            asyncio.create_task(self._load_historical_data())
-        except RuntimeError:
-            # No event loop running, load synchronously
-            asyncio.run(self._load_historical_data())
+            self._load_historical_data_sync()
+        except Exception as e:
+            logger.warning(f"Sync data load failed during init: {e}")
+            # Try async as fallback
+            try:
+                asyncio.run(self._load_historical_data())
+            except Exception as e2:
+                logger.error(f"Both sync and async data load failed: {e2}")
     
     def _init_database(self) -> None:
         """Initialize SQLite database for persistence"""
@@ -269,6 +272,10 @@ class StrategyPerformanceTracker:
     async def _load_historical_data(self) -> None:
         """Load historical trade data from database"""
         try:
+            # Clear existing data to prevent duplicates
+            self.trade_records.clear()
+            self.strategy_stats.clear()
+            
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 
@@ -281,16 +288,106 @@ class StrategyPerformanceTracker:
                 
                 for row in cursor.fetchall():
                     trade = self._row_to_trade_record(row)
-                    self.trade_records[trade.strategy_id].append(trade)
+                    # Check for duplicates by signal_id
+                    existing_trades = [t for t in self.trade_records[trade.strategy_id] if t.signal_id == trade.signal_id]
+                    if not existing_trades:
+                        self.trade_records[trade.strategy_id].append(trade)
                 
                 # Recalculate statistics for all strategies
                 for strategy_id in self.trade_records.keys():
                     await self._calculate_strategy_stats(strategy_id)
                 
-                logger.info(f"Loaded {sum(len(trades) for trades in self.trade_records.values())} historical trades")
+                total_loaded = sum(len(trades) for trades in self.trade_records.values())
+                logger.info(f"Loaded {total_loaded} unique historical trades")
                 
         except Exception as e:
             logger.error(f"Error loading historical data: {e}")
+    
+    def _load_historical_data_sync(self) -> None:
+        """Synchronous version of historical data loading"""
+        try:
+            # Clear existing data to prevent duplicates
+            self.trade_records.clear()
+            self.strategy_stats.clear()
+            
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                
+                cursor.execute('''
+                    SELECT * FROM trade_records
+                    WHERE status = 'filled'
+                    ORDER BY entry_time DESC
+                    LIMIT 10000
+                ''')
+                
+                for row in cursor.fetchall():
+                    trade = self._row_to_trade_record(row)
+                    # Check for duplicates by signal_id
+                    existing_trades = [t for t in self.trade_records[trade.strategy_id] if t.signal_id == trade.signal_id]
+                    if not existing_trades:
+                        self.trade_records[trade.strategy_id].append(trade)
+                
+                # Calculate statistics for all strategies (sync version)
+                for strategy_id in self.trade_records.keys():
+                    self._calculate_strategy_stats_sync(strategy_id)
+                
+                total_loaded = sum(len(trades) for trades in self.trade_records.values())
+                logger.info(f"Loaded {total_loaded} unique historical trades (sync)")
+                
+        except Exception as e:
+            logger.error(f"Error loading historical data sync: {e}")
+    
+    def _calculate_strategy_stats_sync(self, strategy_id: str) -> None:
+        """Synchronous version of strategy stats calculation"""
+        trades = self.trade_records[strategy_id]
+        
+        if not trades:
+            self.strategy_stats[strategy_id] = StrategyStats(strategy_id=strategy_id)
+            return
+        
+        stats = StrategyStats(strategy_id=strategy_id)
+        
+        # Basic metrics
+        stats.total_trades = len(trades)
+        stats.winning_trades = sum(1 for t in trades if t.pnl_usd > 0)
+        stats.losing_trades = sum(1 for t in trades if t.pnl_usd < 0)
+        
+        # P&L metrics
+        stats.total_pnl_usd = sum(t.pnl_usd for t in trades)
+        stats.total_pnl_pct = sum(t.pnl_pct for t in trades)
+        
+        wins = [t.pnl_usd for t in trades if t.pnl_usd > 0]
+        losses = [t.pnl_usd for t in trades if t.pnl_usd < 0]
+        
+        stats.avg_win_usd = np.mean(wins) if wins else 0.0
+        stats.avg_loss_usd = np.mean(losses) if losses else 0.0
+        stats.largest_win_usd = max(wins) if wins else 0.0
+        stats.largest_loss_usd = min(losses) if losses else 0.0
+        
+        # Risk metrics
+        stats.win_rate = (stats.winning_trades / stats.total_trades * 100) if stats.total_trades > 0 else 0.0
+        
+        gross_profit = sum(wins) if wins else 0.0
+        gross_loss = abs(sum(losses)) if losses else 0.0
+        stats.profit_factor = (gross_profit / gross_loss) if gross_loss > 0 else float('inf') if gross_profit > 0 else 0.0
+        
+        # Simple metrics (avoiding complex numpy operations)
+        returns = [t.pnl_pct for t in trades]
+        if len(returns) > 1:
+            avg_return = np.mean(returns)
+            std_return = np.std(returns, ddof=1)
+            stats.sharpe_ratio = (avg_return - self.risk_free_rate / 252) / std_return if std_return > 0 else 0.0
+        
+        # Volume metrics
+        stats.total_volume_usd = sum(t.size_usd for t in trades)
+        stats.avg_trade_size_usd = stats.total_volume_usd / stats.total_trades if stats.total_trades > 0 else 0.0
+        
+        # Timestamps
+        stats.first_trade_time = min(t.entry_time for t in trades)
+        stats.last_trade_time = max(t.entry_time for t in trades)
+        stats.last_updated = datetime.now()
+        
+        self.strategy_stats[strategy_id] = stats
     
     def _row_to_trade_record(self, row: tuple) -> TradeRecord:
         """Convert database row to TradeRecord object"""
@@ -738,9 +835,14 @@ class StrategyPerformanceTracker:
 # Global instance for easy access
 _performance_tracker: Optional[StrategyPerformanceTracker] = None
 
-def get_performance_tracker() -> StrategyPerformanceTracker:
+def get_performance_tracker(force_reload: bool = False) -> StrategyPerformanceTracker:
     """Get global performance tracker instance"""
     global _performance_tracker
-    if _performance_tracker is None:
+    if _performance_tracker is None or force_reload:
         _performance_tracker = StrategyPerformanceTracker()
     return _performance_tracker
+
+def reset_performance_tracker():
+    """Reset global performance tracker (for debugging/testing)"""
+    global _performance_tracker
+    _performance_tracker = None
