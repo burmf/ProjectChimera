@@ -58,6 +58,129 @@ class ExchangeAdaptersConfig(BaseModel):
     bitget: ExchangeAdapterConfig = Field(default_factory=ExchangeAdapterConfig)
 
 
+class AIConfig(BaseModel):
+    """AI Decision Engine configuration for ProjectChimera 4-layer system"""
+    
+    # OpenAI API settings
+    openai_api_key: SecretStr = Field(default=SecretStr(""), description="OpenAI API key")
+    openai_model: str = Field(default="o3-mini", description="OpenAI model to use (o3-mini/o3)")
+    openai_base_url: Optional[str] = Field(default=None, description="Custom OpenAI API base URL")
+    
+    # Decision intervals
+    decision_1min_interval_seconds: int = Field(default=60, ge=30, le=300, description="1-minute decision interval")
+    strategy_1hour_interval_seconds: int = Field(default=3600, ge=1800, le=7200, description="1-hour strategy interval")
+    
+    # Model parameters
+    max_tokens: int = Field(default=1000, ge=100, le=4000, description="Maximum tokens per request")
+    temperature: float = Field(default=0.1, ge=0.0, le=1.0, description="Model temperature for consistency")
+    
+    # Risk and confidence thresholds
+    min_confidence_threshold: float = Field(default=0.6, ge=0.3, le=0.9, description="Minimum confidence to trade")
+    max_position_size_pct: float = Field(default=0.05, gt=0, le=0.20, description="Maximum AI position size %")
+    
+    # Cost management
+    max_daily_api_cost_usd: float = Field(default=50.0, gt=0, description="Maximum daily API cost in USD")
+    cost_tracking_window_hours: int = Field(default=24, ge=12, le=48, description="Cost tracking window")
+    
+    # Performance settings
+    enable_1min_decisions: bool = Field(default=True, description="Enable 1-minute trading decisions")
+    enable_1hour_strategy: bool = Field(default=True, description="Enable 1-hour strategy planning")
+    parallel_processing: bool = Field(default=False, description="Enable parallel symbol processing")
+
+
+class NewsCollectorConfig(BaseModel):
+    """News RSS collector configuration"""
+    
+    # Collection settings
+    enabled: bool = Field(default=True, description="Enable news collection")
+    collection_interval_hours: int = Field(default=1, ge=1, le=12, description="News collection interval")
+    
+    # News sources priorities
+    coindesk_priority: int = Field(default=1, ge=1, le=3, description="CoinDesk priority (1=high)")
+    cointelegraph_priority: int = Field(default=1, ge=1, le=3, description="CoinTelegraph priority")
+    reuters_priority: int = Field(default=1, ge=1, le=3, description="Reuters priority")
+    
+    # Filtering settings
+    min_relevance_score: float = Field(default=0.1, ge=0.0, le=1.0, description="Minimum relevance score")
+    max_articles_per_source: int = Field(default=20, ge=5, le=100, description="Max articles per source")
+    
+    # Request settings
+    request_timeout_seconds: int = Field(default=30, ge=10, le=120, description="HTTP request timeout")
+    retry_attempts: int = Field(default=3, ge=1, le=5, description="Number of retry attempts")
+    delay_between_sources_seconds: float = Field(default=1.0, ge=0.5, le=5.0, description="Delay between source requests")
+
+
+class XPostsCollectorConfig(BaseModel):
+    """X/Twitter posts collector configuration"""
+    
+    # Collection settings
+    enabled: bool = Field(default=True, description="Enable X posts collection")
+    collection_interval_hours: int = Field(default=1, ge=1, le=6, description="X posts collection interval")
+    
+    # Query settings
+    max_results_per_query: int = Field(default=50, ge=10, le=200, description="Max results per search query")
+    query_timeout_seconds: int = Field(default=60, ge=30, le=300, description="Query timeout")
+    
+    # Filtering settings
+    min_engagement_score: float = Field(default=0.0, ge=0.0, le=1.0, description="Minimum engagement score")
+    min_relevance_score: float = Field(default=0.1, ge=0.0, le=1.0, description="Minimum relevance score")
+    
+    # Rate limiting
+    delay_between_queries_seconds: float = Field(default=2.0, ge=1.0, le=10.0, description="Delay between queries")
+    delay_between_accounts_seconds: float = Field(default=3.0, ge=1.0, le=10.0, description="Delay between account queries")
+    
+    # Advanced settings
+    enable_influential_accounts: bool = Field(default=True, description="Enable influential accounts monitoring")
+    max_influential_accounts_per_cycle: int = Field(default=3, ge=1, le=10, description="Max accounts per cycle")
+
+
+class RedisStreamsConfig(BaseModel):
+    """Redis Streams configuration for data pipeline"""
+    
+    # Connection settings
+    redis_url: str = Field(default="redis://localhost:6379", description="Redis connection URL")
+    redis_db: int = Field(default=0, ge=0, le=15, description="Redis database number")
+    
+    # Stream settings
+    max_stream_length: int = Field(default=10000, ge=1000, le=100000, description="Maximum stream length")
+    consumer_block_ms: int = Field(default=1000, ge=100, le=10000, description="Consumer block timeout")
+    consumer_count: int = Field(default=10, ge=1, le=100, description="Messages per consumer read")
+    
+    # Stream names
+    market_data_stream: str = Field(default="market_data", description="Market data stream name")
+    news_stream: str = Field(default="news", description="News stream name")
+    x_posts_stream: str = Field(default="x_posts", description="X posts stream name")
+    ai_decisions_stream: str = Field(default="ai_decisions", description="AI decisions stream name")
+    executions_stream: str = Field(default="executions", description="Executions stream name")
+    
+    # Consumer groups
+    ai_processors_group: str = Field(default="ai_processors", description="AI processors consumer group")
+    execution_group: str = Field(default="execution", description="Execution consumer group")
+    logging_group: str = Field(default="logging", description="Logging consumer group")
+
+
+class LayerSystemConfig(BaseModel):
+    """Configuration for the 4-layer trading system"""
+    
+    # System settings
+    enabled: bool = Field(default=True, description="Enable 4-layer system")
+    initial_portfolio_value: float = Field(default=150000.0, gt=0, description="Initial portfolio value USD")
+    
+    # Layer configurations
+    ai: AIConfig = Field(default_factory=AIConfig)
+    news_collector: NewsCollectorConfig = Field(default_factory=NewsCollectorConfig)
+    x_posts_collector: XPostsCollectorConfig = Field(default_factory=XPostsCollectorConfig)
+    redis_streams: RedisStreamsConfig = Field(default_factory=RedisStreamsConfig)
+    
+    # Inter-layer settings
+    enable_learning_data_storage: bool = Field(default=True, description="Enable AI learning data storage")
+    health_check_interval_seconds: int = Field(default=30, ge=10, le=300, description="Health check interval")
+    
+    # Performance settings
+    enable_performance_monitoring: bool = Field(default=True, description="Enable performance monitoring")
+    log_performance_interval_minutes: int = Field(default=60, ge=15, le=240, description="Performance logging interval")
+
+
 class TradingConfig(BaseModel):
     """Trading strategy configuration"""
     
@@ -243,13 +366,18 @@ class Settings(BaseSettings):
     strategies: StrategiesConfig = Field(default_factory=StrategiesConfig)
     exchange_adapters: ExchangeAdaptersConfig = Field(default_factory=ExchangeAdaptersConfig)
     
+    # ProjectChimera 4-Layer System Configuration
+    layer_system: LayerSystemConfig = Field(default_factory=lambda: LayerSystemConfig(
+        ai=AIConfig(
+            openai_api_key=SecretStr(os.getenv("OPENAI_API_KEY", "")),
+            openai_model=os.getenv("OPENAI_MODEL", "o3-mini"),
+            max_daily_api_cost_usd=float(os.getenv("OPENAI_MAX_DAILY_COST", "50.0"))
+        )
+    ))
+    
     # Paths
     data_dir: Path = Field(default=Path("data"), description="Data directory")
     logs_dir: Path = Field(default=Path("logs"), description="Logs directory")
-    
-    # Sub-configurations - enhanced with strategies
-    strategies: StrategiesConfig = Field(default_factory=StrategiesConfig)
-    exchange_adapters: ExchangeAdaptersConfig = Field(default_factory=ExchangeAdaptersConfig)
     
     model_config = SettingsConfigDict(
         env_file=".env",
