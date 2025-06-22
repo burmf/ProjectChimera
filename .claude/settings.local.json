@@ -54,7 +54,9 @@
       "Bash(PYTHONPATH=src python3 -m pytest tests/risk/test_phase_d_simple.py -v)",
       "Bash(PYTHONPATH=src python3 -m pytest tests/risk/test_phase_d_simple.py -v --tb=short)",
       "Bash(PYTHONPATH=src python3:*)",
-      "Bash(pyenv global:*)"
+      "Bash(pyenv global:*)",
+      "Bash(poetry export:*)",
+      "Bash(curl:*)"
     ],
     "deny": []
   }

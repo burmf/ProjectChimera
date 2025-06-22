@@ -1,1 +1,3 @@
-# Monitor tests module
+"""
+Tests for monitoring module
+"""

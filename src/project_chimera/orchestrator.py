@@ -18,7 +18,7 @@ from contextlib import asynccontextmanager
 from .settings import get_settings
 from .datafeed.bitget_ws import BitgetWebSocketFeed, create_bitget_ws_feed
 from .risk.unified_engine import UnifiedRiskEngine, UnifiedRiskConfig
-from .execution.bitget import BitgetExecutionClient, BitgetConfig
+from .execution.bitget import BitgetExecutionEngine, BitgetConfig
 from .domains.market import Ticker, OrderBook, Signal, MarketFrame, SignalType
 from .strategies import (
     WeekendEffectStrategy, StopReversionStrategy, FundingContraStrategy,
@@ -653,7 +653,7 @@ class BitgetExecutionEngine(AsyncPipelineComponent):
                 'timeout': self.settings.api.timeout_seconds
             }
             
-            self.execution_client = BitgetExecutionClient(execution_config)
+            self.execution_client = BitgetExecutionEngine(execution_config)
             
             # Test connection
             await self.execution_client.test_connection()
