@@ -144,52 +144,74 @@ class StrategyPerformanceAPI:
             return False
     
     def _mock_strategy_data(self) -> Dict[str, StrategyStats]:
-        """Generate mock strategy data"""
-        import random
-        
-        strategies = [
-            'weekend_effect', 'stop_reversion', 'funding_contrarian',
-            'lob_reversion', 'volatility_breakout', 'cme_gap', 'basis_arbitrage'
-        ]
-        
-        mock_data = {}
-        for strategy in strategies:
-            mock_data[strategy] = self._mock_single_strategy(strategy)
-        
-        return mock_data
+        """Fallback to real data or minimal mock data"""
+        try:
+            # Try to get real data first
+            return self.performance_tracker.get_all_strategy_stats()
+        except Exception:
+            # If that fails, create minimal empty strategies
+            strategies = [
+                'weekend_effect', 'stop_reversion', 'funding_contrarian',
+                'lob_reversion', 'volatility_breakout', 'cme_gap', 'basis_arbitrage'
+            ]
+            
+            mock_data = {}
+            for strategy in strategies:
+                mock_data[strategy] = StrategyStats(
+                    strategy_id=strategy,
+                    total_trades=0,
+                    winning_trades=0,
+                    losing_trades=0,
+                    total_pnl_usd=0.0,
+                    win_rate=0.0,
+                    profit_factor=0.0,
+                    sharpe_ratio=0.0,
+                    max_drawdown_pct=0.0,
+                    total_volume_usd=0.0,
+                    last_updated=datetime.now()
+                )
+            
+            return mock_data
     
     def _mock_single_strategy(self, strategy_id: str) -> StrategyStats:
-        """Generate mock data for a single strategy"""
-        import random
+        """Get real strategy data or return minimal data"""
+        try:
+            # Try to get real strategy data
+            real_stats = self.performance_tracker.get_strategy_stats(strategy_id)
+            if real_stats:
+                return real_stats
+        except Exception:
+            pass
         
+        # Return minimal real-looking data with zero values
         return StrategyStats(
             strategy_id=strategy_id,
-            total_trades=random.randint(10, 200),
-            winning_trades=random.randint(5, 120),
-            losing_trades=random.randint(5, 80),
-            total_pnl_usd=random.uniform(-2000, 5000),
-            total_pnl_pct=random.uniform(-10, 25),
-            avg_win_usd=random.uniform(50, 300),
-            avg_loss_usd=random.uniform(-200, -30),
-            largest_win_usd=random.uniform(300, 800),
-            largest_loss_usd=random.uniform(-500, -100),
-            win_rate=random.uniform(40, 70),
-            profit_factor=random.uniform(0.8, 2.5),
-            sharpe_ratio=random.uniform(-0.5, 2.0),
-            sortino_ratio=random.uniform(-0.3, 2.5),
-            max_drawdown_pct=random.uniform(2, 15),
-            calmar_ratio=random.uniform(0.1, 3.0),
-            avg_holding_time_hours=random.uniform(0.5, 48),
-            avg_slippage_bps=random.uniform(1, 10),
-            total_commission_usd=random.uniform(10, 100),
-            total_volume_usd=random.uniform(5000, 50000),
-            avg_trade_size_usd=random.uniform(100, 1000),
-            daily_pnl_std=random.uniform(50, 300),
-            last_30d_pnl_usd=random.uniform(-1000, 2000),
-            last_7d_pnl_usd=random.uniform(-500, 1000),
-            last_24h_pnl_usd=random.uniform(-200, 400),
-            first_trade_time=datetime.now() - timedelta(days=random.randint(30, 365)),
-            last_trade_time=datetime.now() - timedelta(hours=random.randint(1, 24)),
+            total_trades=0,
+            winning_trades=0,
+            losing_trades=0,
+            total_pnl_usd=0.0,
+            total_pnl_pct=0.0,
+            avg_win_usd=0.0,
+            avg_loss_usd=0.0,
+            largest_win_usd=0.0,
+            largest_loss_usd=0.0,
+            win_rate=0.0,
+            profit_factor=0.0,
+            sharpe_ratio=0.0,
+            sortino_ratio=0.0,
+            max_drawdown_pct=0.0,
+            calmar_ratio=0.0,
+            avg_holding_time_hours=0.0,
+            avg_slippage_bps=0.0,
+            total_commission_usd=0.0,
+            total_volume_usd=0.0,
+            avg_trade_size_usd=0.0,
+            daily_pnl_std=0.0,
+            last_30d_pnl_usd=0.0,
+            last_7d_pnl_usd=0.0,
+            last_24h_pnl_usd=0.0,
+            first_trade_time=None,
+            last_trade_time=None,
             last_updated=datetime.now()
         )
 
