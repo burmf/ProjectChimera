@@ -251,6 +251,63 @@ class BitgetAPIClient:
         
         return {}
     
+    async def get_futures_account(self) -> Dict[str, Any]:
+        """Get futures account information (requires authentication)"""
+        if not self.api_key:
+            return {'error': 'Authentication required'}
+        
+        endpoint = "/api/mix/v1/account/account"
+        params = {"symbol": "BTCUSDT_UMCBL", "marginCoin": "USDT"}
+        
+        data = await self._make_request("GET", endpoint, params, auth_required=True)
+        
+        if data:
+            return {
+                'margin_coin': data.get('marginCoin', 'USDT'),
+                'locked': float(data.get('locked', 0)),
+                'available': float(data.get('available', 0)),
+                'crossMaxAvailable': float(data.get('crossMaxAvailable', 0)),
+                'fixedMaxAvailable': float(data.get('fixedMaxAvailable', 0)),
+                'maxTransferOut': float(data.get('maxTransferOut', 0)),
+                'equity': float(data.get('equity', 0)),
+                'usdtEquity': float(data.get('usdtEquity', 0)),
+                'unrealizedPL': float(data.get('unrealizedPL', 0)),
+                'timestamp': datetime.now()
+            }
+        
+        return {}
+    
+    async def get_futures_positions(self) -> List[Dict[str, Any]]:
+        """Get futures positions (requires authentication)"""
+        if not self.api_key:
+            return []
+        
+        endpoint = "/api/mix/v1/position/allPosition"
+        params = {"productType": "umcbl"}
+        
+        data = await self._make_request("GET", endpoint, params, auth_required=True)
+        
+        if data:
+            positions = []
+            for pos in data:
+                if float(pos.get('total', 0)) != 0:  # Only active positions
+                    positions.append({
+                        'symbol': pos.get('symbol', ''),
+                        'size': float(pos.get('total', 0)),
+                        'available': float(pos.get('available', 0)),
+                        'averageOpenPrice': float(pos.get('averageOpenPrice', 0)),
+                        'markPrice': float(pos.get('markPrice', 0)),
+                        'unrealizedPL': float(pos.get('unrealizedPL', 0)),
+                        'side': pos.get('holdSide', ''),
+                        'marginMode': pos.get('marginMode', ''),
+                        'leverage': pos.get('leverage', ''),
+                        'marginSize': float(pos.get('marginSize', 0)),
+                        'timestamp': datetime.now()
+                    })
+            return positions
+        
+        return []
+    
     async def get_multi_ticker(self, symbols: List[str]) -> Dict[str, Dict[str, Any]]:
         """Get ticker data for multiple symbols"""
         tasks = [self.get_ticker(symbol) for symbol in symbols]
@@ -335,20 +392,48 @@ class BitgetMarketDataService:
     async def get_portfolio_value(self) -> Dict[str, Any]:
         """Get real portfolio value from Bitget account"""
         try:
-            account_info = await self.client.get_account_info()
+            # Try futures account first (primary for ProjectChimera)
+            futures_account = await self.client.get_futures_account()
             
-            if 'error' in account_info:
+            if 'error' not in futures_account and futures_account.get('equity', 0) > 0:
+                # Get futures positions for additional P&L data
+                positions = await self.client.get_futures_positions()
+                
+                total_unrealized_pnl = sum(pos.get('unrealizedPL', 0) for pos in positions)
+                
                 return {
-                    'total_value_usdt': 150000.0,  # Default demo value
-                    'error': account_info['error'],
-                    'demo_mode': True,
+                    'total_value_usdt': futures_account.get('usdtEquity', 150000.0),
+                    'equity': futures_account.get('equity', 150000.0),
+                    'available': futures_account.get('available', 0),
+                    'locked': futures_account.get('locked', 0),
+                    'unrealized_pnl': total_unrealized_pnl,
+                    'positions': positions,
+                    'account_type': 'futures',
+                    'demo_mode': False,
                     'timestamp': datetime.now()
                 }
             
+            # Fallback to spot account
+            account_info = await self.client.get_account_info()
+            
+            if 'error' not in account_info:
+                return {
+                    'total_value_usdt': account_info.get('total_value_usdt', 150000.0),
+                    'assets': account_info.get('assets', {}),
+                    'unrealized_pnl': 0.0,  # Spot doesn't have unrealized P&L
+                    'account_type': 'spot',
+                    'demo_mode': False,
+                    'timestamp': datetime.now()
+                }
+            
+            # Authentication failed or no data - use demo mode
             return {
-                'total_value_usdt': account_info.get('total_value_usdt', 150000.0),
-                'assets': account_info.get('assets', {}),
-                'demo_mode': False,
+                'total_value_usdt': 150000.0,  # Default demo value
+                'equity': 150000.0,
+                'unrealized_pnl': 0.0,
+                'error': 'Authentication required or API unavailable',
+                'demo_mode': True,
+                'account_type': 'demo',
                 'timestamp': datetime.now()
             }
             
@@ -356,8 +441,11 @@ class BitgetMarketDataService:
             logger.error(f"Error getting portfolio value: {e}")
             return {
                 'total_value_usdt': 150000.0,
+                'equity': 150000.0,
+                'unrealized_pnl': 0.0,
                 'error': str(e),
                 'demo_mode': True,
+                'account_type': 'demo',
                 'timestamp': datetime.now()
             }
     

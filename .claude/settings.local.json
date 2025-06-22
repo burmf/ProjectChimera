@@ -57,7 +57,17 @@
       "Bash(pyenv global:*)",
       "Bash(poetry export:*)",
       "Bash(curl:*)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(hash -r)",
+      "Bash(complete:*)",
+      "Bash(true)",
+      "Bash(poetry add:*)",
+      "Bash(tar:*)",
+      "Bash(./configure:*)",
+      "Bash(wget:*)",
+      "Bash(make:*)",
+      "Bash(TA_LIBRARY_PATH=/usr/local/lib TA_INCLUDE_PATH=/usr/local/include pip install TA-Lib)",
+      "Bash(pip uninstall:*)"
     ],
     "deny": []
   }

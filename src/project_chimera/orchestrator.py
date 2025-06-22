@@ -24,6 +24,7 @@ from .strategies import (
     WeekendEffectStrategy, StopReversionStrategy, FundingContraStrategy,
     create_weekend_effect_strategy, create_stop_reversion_strategy, create_funding_contra_strategy
 )
+from .analysis import TechnicalAnalyzer, TechnicalSignal
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -743,6 +744,10 @@ class TradingOrchestrator:
         self.symbols = symbols
         self.portfolio_value = initial_portfolio_value
         
+        # Initialize technical analysis
+        self.technical_analyzer = TechnicalAnalyzer()
+        self.price_history = {}  # symbol -> list of price data
+        
         # Initialize components with real implementations
         self.data_feed = BitgetDataFeed(symbols)
         self.strategy_hub = StrategyHub()
@@ -807,6 +812,9 @@ class TradingOrchestrator:
         try:
             self.stats['market_frames_processed'] += 1
             
+            # Update price history for technical analysis
+            await self._update_price_history(market_frame)
+            
             # Stage 1: Generate signals
             signals = await self.strategy_hub.process(market_frame)
             
@@ -827,6 +835,62 @@ class TradingOrchestrator:
             self.stats['errors'] += 1
             logger.error(f"Error in pipeline: {e}")
             traceback.print_exc()
+    
+    async def _update_price_history(self, market_frame: MarketFrame):
+        """Update price history for technical analysis"""
+        symbol = market_frame.symbol
+        
+        if symbol not in self.price_history:
+            self.price_history[symbol] = []
+        
+        # Add current price data
+        price_data = {
+            'timestamp': market_frame.timestamp,
+            'open': market_frame.last,  # Approximate open with last price
+            'high': market_frame.last,  # Will be updated with actual high/low
+            'low': market_frame.last,
+            'close': market_frame.last,
+            'volume': market_frame.volume if hasattr(market_frame, 'volume') else 0
+        }
+        
+        self.price_history[symbol].append(price_data)
+        
+        # Keep only last 200 periods for efficiency
+        max_history = 200
+        if len(self.price_history[symbol]) > max_history:
+            self.price_history[symbol] = self.price_history[symbol][-max_history:]
+    
+    def get_technical_analysis(self, symbol: str) -> Optional[Dict]:
+        """Get technical analysis for a symbol"""
+        if symbol not in self.price_history or len(self.price_history[symbol]) < 20:
+            return None
+        
+        try:
+            # Convert to DataFrame
+            import pandas as pd
+            df = pd.DataFrame(self.price_history[symbol])
+            df['datetime'] = pd.to_datetime(df['timestamp'], unit='s')
+            df = df.set_index('datetime')
+            
+            # Calculate indicators
+            indicators_df = self.technical_analyzer.calculate_all_indicators(df)
+            
+            # Generate signals
+            signals = self.technical_analyzer.generate_signals(indicators_df)
+            
+            # Get market regime
+            regime = self.technical_analyzer.get_market_regime(indicators_df)
+            
+            return {
+                'indicators': indicators_df.iloc[-1].to_dict() if not indicators_df.empty else {},
+                'signals': [signal.__dict__ for signal in signals],
+                'regime': regime,
+                'history_length': len(df)
+            }
+            
+        except Exception as e:
+            logger.error(f"Error in technical analysis for {symbol}: {e}")
+            return None
     
     def get_health(self) -> Dict[str, Any]:
         """Get overall system health"""

@@ -16,7 +16,7 @@ keywords = ["trading", "cryptocurrency", "algorithmic", "async", "risk-managemen
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Financial and Insurance Industry",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: M",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -42,6 +42,7 @@ dependencies = [
     "asyncpg>=0.29.0",
     "redis>=5.0.0",
     "aiofiles>=23.0.0",
+    "pyyaml (>=6.0.2,<7.0.0)",
 ]
 
 [project.optional-dependencies]

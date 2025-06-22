@@ -217,11 +217,29 @@ class TradingSystemAPI:
         """Get real metrics from performance tracking and Bitget API"""
         
         try:
+            # Get real Bitget portfolio data
+            portfolio_data = await self.bitget_service.get_portfolio_value()
+            
             # Get real performance data
             summary = self.performance_tracker.get_performance_summary()
             all_stats = self.performance_tracker.get_all_strategy_stats()
             
-            total_pnl = summary.get('total_pnl_usd', 0.0)
+            # Use Bitget data if available, fallback to performance tracker
+            if not portfolio_data.get('demo_mode', True):
+                # Real Bitget account data
+                current_equity = portfolio_data.get('total_value_usdt', 150000.0)
+                unrealized_pnl = portfolio_data.get('unrealized_pnl', 0.0)
+                base_equity = 150000.0  # ProjectChimera starting capital
+                total_pnl = current_equity - base_equity + unrealized_pnl
+                
+                logger.info(f"Using real Bitget data: Equity=${current_equity:.2f}, Unrealized P&L=${unrealized_pnl:.2f}")
+            else:
+                # Fallback to performance tracker data
+                total_pnl = summary.get('total_pnl_usd', 0.0)
+                current_equity = 150000.0 + total_pnl
+                
+                logger.info(f"Using demo/performance tracker data: P&L=${total_pnl:.2f}")
+            
             total_trades = summary.get('total_trades', 0)
             total_volume = summary.get('total_volume_usd', 0.0)
             avg_win_rate = summary.get('average_win_rate', 0.0)
@@ -258,10 +276,6 @@ class TradingSystemAPI:
             except Exception:
                 pass
             
-            # Calculate estimated equity
-            base_equity = 150000.0
-            current_equity = base_equity + total_pnl
-            
             return {
                 'chimera_pnl_total_usd': total_pnl,
                 'chimera_slippage_milliseconds': avg_slippage * 10,  # Convert bps to rough ms estimate
@@ -273,7 +287,9 @@ class TradingSystemAPI:
                 'chimera_system_uptime_seconds': uptime_seconds,
                 'chimera_win_rate_percent': avg_win_rate,
                 'chimera_total_volume_usd': total_volume,
-                'chimera_commission_total_usd': total_commission
+                'chimera_commission_total_usd': total_commission,
+                'chimera_account_type': portfolio_data.get('account_type', 'demo'),
+                'chimera_demo_mode': portfolio_data.get('demo_mode', True)
             }
             
         except Exception as e:
@@ -291,7 +307,9 @@ class TradingSystemAPI:
                     'chimera_equity_value_usd': 150000.0 + summary.get('total_pnl_usd', 0.0),
                     'chimera_system_uptime_seconds': 3600.0,
                     'chimera_win_rate_percent': summary.get('average_win_rate', 0.0),
-                    'chimera_total_volume_usd': summary.get('total_volume_usd', 0.0)
+                    'chimera_total_volume_usd': summary.get('total_volume_usd', 0.0),
+                    'chimera_account_type': 'demo',
+                    'chimera_demo_mode': True
                 }
             except Exception:
                 return {
@@ -302,7 +320,9 @@ class TradingSystemAPI:
                     'chimera_orders_total': 0,
                     'chimera_orders_filled_total': 0,
                     'chimera_equity_value_usd': 150000.0,
-                    'chimera_system_uptime_seconds': 3600.0
+                    'chimera_system_uptime_seconds': 3600.0,
+                    'chimera_account_type': 'demo',
+                    'chimera_demo_mode': True
                 }
 
 
@@ -516,8 +536,15 @@ def main_dashboard():
         
         # Bitget connection status
         try:
-            bitget_status = "🟢 Connected" 
-            st.success(f"Bitget API: {bitget_status}")
+            # Check account type from metrics
+            metrics_data = api.get_metrics()
+            account_type = metrics_data.get('chimera_account_type', 'demo')
+            is_demo = metrics_data.get('chimera_demo_mode', True)
+            
+            if not is_demo:
+                st.success(f"🟢 Bitget API: Connected ({account_type.title()} Account)")
+            else:
+                st.warning("⚠️ Bitget API: Demo Mode (No API keys configured)")
         except Exception:
             st.warning("⚠️ Bitget API: Demo Mode (No API keys configured)")
         
