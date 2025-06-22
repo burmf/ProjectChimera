@@ -79,8 +79,17 @@ except ImportError:
     
     st = MockStreamlit()
 
-from ..monitor.strategy_performance import get_performance_tracker, StrategyStats, TradeRecord
-from .dashboard import TradingSystemAPI
+# Import performance tracker and related classes
+try:
+    from ..monitor.strategy_performance import get_performance_tracker, StrategyStats, TradeRecord
+    from .dashboard import TradingSystemAPI
+except ImportError:
+    # Fallback for direct execution
+    import sys
+    import os
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../..'))
+    from src.project_chimera.monitor.strategy_performance import get_performance_tracker, StrategyStats, TradeRecord
+    from src.project_chimera.ui.dashboard import TradingSystemAPI
 
 logger = logging.getLogger(__name__)
 

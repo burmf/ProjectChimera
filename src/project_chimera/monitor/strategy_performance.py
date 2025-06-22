@@ -185,8 +185,13 @@ class StrategyPerformanceTracker:
         # Initialize database
         self._init_database()
         
-        # Load existing data
-        asyncio.create_task(self._load_historical_data())
+        # Load existing data (handle asyncio properly)
+        try:
+            loop = asyncio.get_running_loop()
+            asyncio.create_task(self._load_historical_data())
+        except RuntimeError:
+            # No event loop running, load synchronously
+            asyncio.run(self._load_historical_data())
     
     def _init_database(self) -> None:
         """Initialize SQLite database for persistence"""

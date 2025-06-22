@@ -56,7 +56,8 @@
       "Bash(PYTHONPATH=src python3:*)",
       "Bash(pyenv global:*)",
       "Bash(poetry export:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(pkill:*)"
     ],
     "deny": []
   }

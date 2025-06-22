@@ -9,6 +9,7 @@ import json
 import logging
 import requests
 import asyncio
+import random
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
 import pandas as pd
@@ -17,8 +18,16 @@ import plotly.express as px
 from plotly.subplots import make_subplots
 
 # Import Bitget API client and performance tracker
-from ..api.bitget_client import get_bitget_service
-from ..monitor.strategy_performance import get_performance_tracker
+try:
+    from ..api.bitget_client import get_bitget_service
+    from ..monitor.strategy_performance import get_performance_tracker
+except ImportError:
+    # Fallback for direct execution
+    import sys
+    import os
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../..'))
+    from src.project_chimera.api.bitget_client import get_bitget_service
+    from src.project_chimera.monitor.strategy_performance import get_performance_tracker
 
 # Mock streamlit for systems without it
 try:

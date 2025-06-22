@@ -18,16 +18,18 @@ sys.path.insert(0, str(project_root))
 from src.project_chimera.api.bitget_client import demo_bitget_data
 
 
-def start_streamlit_dashboard(port: int, script_path: str, name: str):
+def start_streamlit_dashboard(port: int, dashboard_type: str, name: str):
     """Start a Streamlit dashboard in background"""
     try:
         cmd = [
             sys.executable, "-m", "streamlit", "run", 
-            script_path, 
+            "run_dashboard.py", 
             "--server.port", str(port),
             "--server.headless", "true",
             "--server.enableCORS", "false",
-            "--server.enableXsrfProtection", "false"
+            "--server.enableXsrfProtection", "false",
+            "--server.runOnSave", "false",
+            "--", dashboard_type  # Pass dashboard type as argument
         ]
         
         print(f"🚀 Starting {name} on port {port}...")
@@ -103,14 +105,14 @@ def main():
     # Start main dashboard
     main_dashboard = start_streamlit_dashboard(
         8501, 
-        "src/project_chimera/ui/dashboard.py",
+        "main",
         "Main Control Center"
     )
     
     # Start strategy dashboard  
     strategy_dashboard = start_streamlit_dashboard(
         8502,
-        "src/project_chimera/ui/strategy_dashboard.py", 
+        "strategy", 
         "Strategy Performance Dashboard"
     )
     
