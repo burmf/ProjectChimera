@@ -1,19 +1,19 @@
 version: '3.8'
 
 services:
-  # Main Trading Bot (4-Layer System)
-  trading-bot:
+  # ProjectChimera 4-Layer System Orchestrator (Main Service)
+  chimera-orchestrator:
     build:
       context: .
       dockerfile: Dockerfile
       target: runtime
-    container_name: chimera-trading-bot
+    container_name: chimera-orchestrator
     restart: unless-stopped
     env_file:
       - .env
     environment:
       - ENVIRONMENT=production
-      - PYTHONPATH=/app
+      - PYTHONPATH=/app/src
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
@@ -21,148 +21,66 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - redis
-      - postgres
-      - news-collector
-      - x-posts-collector
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
     networks:
       - chimera-network
     healthcheck:
-      test: ["CMD", "python", "-c", "import project_chimera; print('OK')"]
-      interval: 30s
-      timeout: 10s
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 60s
+      timeout: 30s
       retries: 3
-      start_period: 60s
+      start_period: 120s
     command: ["python", "-m", "project_chimera.orchestrator_4layer"]
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
 
-  # ProjectChimera 4-Layer System Orchestrator  
-  chimera-4layer:
+  # Data Collectors Service (News + X Posts)
+  data-collectors:
     build:
       context: .
       dockerfile: Dockerfile
       target: runtime
-    container_name: chimera-4layer-orchestrator
+    container_name: chimera-data-collectors
     restart: unless-stopped
     env_file:
       - .env
     environment:
       - ENVIRONMENT=production
-      - PYTHONPATH=/app
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - OPENAI_MODEL=${OPENAI_MODEL:-o3-mini}
-      - OPENAI_MAX_DAILY_COST=${OPENAI_MAX_DAILY_COST:-50.0}
-    volumes:
-      - ./data:/app/data
-      - ./logs:/app/logs
-      - ./config:/app/config
-    ports:
-      - "8002:8000"
-    depends_on:
-      - redis
-      - postgres
-      - news-collector
-      - x-posts-collector
-    networks:
-      - chimera-network
-    healthcheck:
-      test: ["CMD", "python", "-c", "from project_chimera.orchestrator_4layer import ProjectChimera4LayerOrchestrator; print('OK')"]
-      interval: 60s
-      timeout: 30s
-      retries: 3
-      start_period: 120s
-    command: ["python", "-m", "project_chimera.orchestrator_4layer", "--symbols", "BTCUSDT", "ETHUSDT", "SOLUSDT"]
-
-  # News RSS Collector Service
-  news-collector:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: runtime
-    container_name: chimera-news-collector
-    restart: unless-stopped
-    env_file:
-      - .env
-    environment:
-      - ENVIRONMENT=production
-      - PYTHONPATH=/app
-      - NEWS_COLLECTION_INTERVAL=${NEWS_COLLECTION_INTERVAL:-1}
+      - PYTHONPATH=/app/src
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
     depends_on:
-      - redis
-      - postgres
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
     networks:
       - chimera-network
     healthcheck:
-      test: ["CMD", "python", "-c", "from project_chimera.collectors.news_rss_collector import NewsRSSCollector; print('OK')"]
+      test: ["CMD", "python", "-m", "project_chimera.collectors.health_check"]
       interval: 120s
       timeout: 30s
       retries: 3
       start_period: 60s
-    command: ["python", "-c", "import asyncio; from project_chimera.streams.redis_pipeline import RedisStreamPipeline; from project_chimera.collectors.news_rss_collector import NewsRSSCollector; asyncio.run(NewsRSSCollector(RedisStreamPipeline()).start())"]
-
-  # X Posts Collector Service  
-  x-posts-collector:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: runtime
-    container_name: chimera-x-posts-collector
-    restart: unless-stopped
-    env_file:
-      - .env
-    environment:
-      - ENVIRONMENT=production
-      - PYTHONPATH=/app
-      - X_POSTS_COLLECTION_INTERVAL=${X_POSTS_COLLECTION_INTERVAL:-1}
-    volumes:
-      - ./data:/app/data
-      - ./logs:/app/logs
-    depends_on:
-      - redis
-      - postgres
-    networks:
-      - chimera-network
-    healthcheck:
-      test: ["CMD", "python", "-c", "from project_chimera.collectors.x_posts_collector import XPostsCollector; print('OK')"]
-      interval: 120s
-      timeout: 30s
-      retries: 3
-      start_period: 60s
-    command: ["python", "-c", "import asyncio; from project_chimera.streams.redis_pipeline import RedisStreamPipeline; from project_chimera.collectors.x_posts_collector import XPostsCollector; asyncio.run(XPostsCollector(RedisStreamPipeline()).start())"]
-
-  # AI Decision Engine Service
-  ai-decision-engine:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: runtime
-    container_name: chimera-ai-decision-engine
-    restart: unless-stopped
-    env_file:
-      - .env
-    environment:
-      - ENVIRONMENT=production
-      - PYTHONPATH=/app
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - OPENAI_MODEL=${OPENAI_MODEL:-o3-mini}
-      - OPENAI_MAX_DAILY_COST=${OPENAI_MAX_DAILY_COST:-50.0}
-    volumes:
-      - ./data:/app/data
-      - ./logs:/app/logs
-    depends_on:
-      - redis
-      - postgres
-    networks:
-      - chimera-network
-    healthcheck:
-      test: ["CMD", "python", "-c", "from project_chimera.ai.openai_decision_engine import OpenAIDecisionEngine; print('OK')"]
-      interval: 60s
-      timeout: 30s
-      retries: 3
-      start_period: 120s
-    command: ["python", "-c", "import asyncio; from project_chimera.streams.redis_pipeline import RedisStreamPipeline; from project_chimera.ai.openai_decision_engine import OpenAIDecisionEngine, AIDecisionConfig; asyncio.run(OpenAIDecisionEngine(AIDecisionConfig('${OPENAI_API_KEY}'), RedisStreamPipeline()).start())"]
+    command: ["python", "-m", "project_chimera.collectors.main"]
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
 
   # Development Trading Bot
   trading-bot-dev:
@@ -208,6 +126,15 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 300M
+          cpus: '0.3'
+        reservations:
+          memory: 128M
+          cpus: '0.1'
 
   # PostgreSQL for persistent storage
   postgres:
@@ -222,7 +149,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./database/init:/docker-entrypoint-initdb.d
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - chimera-network
     healthcheck:
@@ -230,6 +157,15 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
 
   # Monitoring with Prometheus
   prometheus:

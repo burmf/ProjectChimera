@@ -67,7 +67,9 @@
       "Bash(wget:*)",
       "Bash(make:*)",
       "Bash(TA_LIBRARY_PATH=/usr/local/lib TA_INCLUDE_PATH=/usr/local/include pip install TA-Lib)",
-      "Bash(pip uninstall:*)"
+      "Bash(pip uninstall:*)",
+      "Bash(rg:*)",
+      "Bash(redis-cli:*)"
     ],
     "deny": []
   }
