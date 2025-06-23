@@ -6,7 +6,7 @@ Pluggable strategy implementations for different market conditions
 from .base import Strategy, StrategyResult, StrategyConfig, TechnicalStrategy
 
 # STRAT-7: Core trading strategies
-from .weekend_effect import WeekendEffectStrategy, create_weekend_effect_strategy
+from .enhanced_weekend_effect import EnhancedWeekendEffectStrategy as WeekendEffectStrategy, create_enhanced_weekend_effect_strategy as create_weekend_effect_strategy
 from .stop_rev import StopReversionStrategy, create_stop_reversion_strategy
 from .fund_contra import FundingContraStrategy, create_funding_contra_strategy
 from .lob_revert import LimitOrderBookReversionStrategy, create_lob_reversion_strategy
