@@ -1,8 +1,9 @@
-import sqlite3
-import psycopg2
 import os
-from dotenv import load_dotenv
+import sqlite3
+
 import pandas as pd
+import psycopg2
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
 
 # 環境変数の読み込み
@@ -20,22 +21,22 @@ def connect_postgres():
 
 def migrate_table(sqlite_cur, pg_cur, table_name):
     print(f"Migrating table: {table_name}")
-    
+
     # SQLiteからデータを取得
     sqlite_cur.execute(f"SELECT * FROM {table_name}")
     rows = sqlite_cur.fetchall()
-    
+
     if not rows:
         print(f"No data found in {table_name}")
         return
-    
+
     # カラム名を取得
     columns = [description[0] for description in sqlite_cur.description]
-    
+
     # PostgreSQLにデータを挿入（tradingスキーマを追加）
     placeholders = ','.join(['%s'] * len(columns))
     columns_str = ','.join(columns)
-    
+
     for row in rows:
         try:
             pg_cur.execute(
@@ -48,18 +49,18 @@ def migrate_table(sqlite_cur, pg_cur, table_name):
 
 def migrate_timeseries_table(sqlite_cur, pg_engine, table_name):
     print(f"Migrating timeseries table: {table_name}")
-    
+
     # SQLiteからデータをPandasデータフレームとして読み込む
     df = pd.read_sql_query(f"SELECT * FROM {table_name}", sqlite_cur)
-    
+
     if df.empty:
         print(f"No data found in {table_name}")
         return
-    
+
     # タイムスタンプ列を変換
     if 'timestamp' in df.columns:
         df['timestamp'] = pd.to_datetime(df['timestamp'])
-    
+
     # PostgreSQLに一括挿入（tradingスキーマを指定）
     try:
         df.to_sql(table_name, pg_engine, schema='trading', if_exists='append', index=False)
@@ -70,12 +71,12 @@ def main():
     # SQLite接続
     sqlite_conn = connect_sqlite()
     sqlite_cur = sqlite_conn.cursor()
-    
+
     # PostgreSQL接続
     pg_conn = connect_postgres()
     pg_cur = pg_conn.cursor()
     pg_engine = create_engine(POSTGRES_URL)
-    
+
     try:
         # 通常テーブルの移行
         regular_tables = [
@@ -85,28 +86,28 @@ def main():
             'ai_trade_decisions',
             'openai_manual_analysis'
         ]
-        
+
         for table in regular_tables:
             migrate_table(sqlite_cur, pg_cur, table)
-        
+
         # TimescaleDBテーブルの移行
         timeseries_tables = [
             'price_data',
             'alpha_signals',
             'openai_api_usage'
         ]
-        
+
         for table in timeseries_tables:
             migrate_timeseries_table(sqlite_cur, pg_engine, table)
-        
+
         # 変更をコミット
         pg_conn.commit()
         print("Migration completed successfully")
-        
+
     except Exception as e:
         pg_conn.rollback()
         print(f"Migration failed: {e}")
-        
+
     finally:
         # 接続をクローズ
         sqlite_cur.close()
@@ -115,4 +116,4 @@ def main():
         pg_conn.close()
 
 if __name__ == '__main__':
-    main() 
+    main()

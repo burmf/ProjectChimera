@@ -6,17 +6,17 @@ Provides technical analysis, market regime detection, and signal generation
 from .technical_indicators import (
     TechnicalAnalyzer,
     TechnicalSignal,
-    quick_rsi,
-    quick_macd,
+    demo_technical_analysis,
     quick_bbands,
-    demo_technical_analysis
+    quick_macd,
+    quick_rsi,
 )
 
 __all__ = [
-    'TechnicalAnalyzer',
-    'TechnicalSignal', 
-    'quick_rsi',
-    'quick_macd',
-    'quick_bbands',
-    'demo_technical_analysis'
+    "TechnicalAnalyzer",
+    "TechnicalSignal",
+    "quick_rsi",
+    "quick_macd",
+    "quick_bbands",
+    "demo_technical_analysis",
 ]

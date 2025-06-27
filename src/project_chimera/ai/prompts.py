@@ -3,8 +3,8 @@ Trading prompts for OpenAI o3 model
 Specialized prompts for 1-minute trading decisions and 1-hour strategy planning
 """
 
-from typing import Dict, Any
 from datetime import datetime
+from typing import Any
 
 
 class TradingPrompts:
@@ -12,7 +12,7 @@ class TradingPrompts:
     Collection of prompts for AI trading decisions
     Optimized for OpenAI o3 model capabilities
     """
-    
+
     @staticmethod
     def get_1min_trading_prompt() -> str:
         """
@@ -200,7 +200,7 @@ Provide risk analysis in this EXACT JSON format:
 Focus on portfolio preservation while maintaining profit potential."""
 
     @staticmethod
-    def format_market_context(market_data: Dict[str, Any]) -> str:
+    def format_market_context(market_data: dict[str, Any]) -> str:
         """Format market context for prompt"""
         return f"""
 Symbol: {market_data.get('symbol', 'Unknown')}
@@ -218,61 +218,63 @@ Timestamp: {market_data.get('timestamp', datetime.now())}
         """Format recent price data for prompt"""
         if not price_history:
             return "No recent price data available"
-        
+
         output = "Recent 1-minute candles:\n"
         for i, candle in enumerate(price_history[-10:]):  # Last 10 candles
             output += f"  {i+1}. {candle.get('timestamp', '')}: O:{candle.get('open', 0):.2f} "
             output += f"H:{candle.get('high', 0):.2f} L:{candle.get('low', 0):.2f} "
-            output += f"C:{candle.get('close', 0):.2f} V:{candle.get('volume', 0):.0f}\n"
-        
+            output += (
+                f"C:{candle.get('close', 0):.2f} V:{candle.get('volume', 0):.0f}\n"
+            )
+
         return output
 
     @staticmethod
-    def format_orderbook_data(orderbook: Dict[str, Any]) -> str:
+    def format_orderbook_data(orderbook: dict[str, Any]) -> str:
         """Format order book data for prompt"""
         if not orderbook:
             return "No order book data available"
-        
+
         output = "Order Book Snapshot:\n"
-        
+
         # Top 5 asks
-        asks = orderbook.get('asks', [])[:5]
+        asks = orderbook.get("asks", [])[:5]
         output += "Asks (sell orders):\n"
         for price, qty in asks:
             output += f"  ${price:.2f} - {qty:.4f}\n"
-        
+
         # Current spread
-        best_bid = orderbook.get('best_bid', 0)
-        best_ask = orderbook.get('best_ask', 0)
+        best_bid = orderbook.get("best_bid", 0)
+        best_ask = orderbook.get("best_ask", 0)
         spread = best_ask - best_bid if best_ask and best_bid else 0
         output += f"Spread: ${spread:.4f}\n"
-        
-        # Top 5 bids  
-        bids = orderbook.get('bids', [])[:5]
+
+        # Top 5 bids
+        bids = orderbook.get("bids", [])[:5]
         output += "Bids (buy orders):\n"
         for price, qty in bids:
             output += f"  ${price:.2f} - {qty:.4f}\n"
-        
+
         return output
 
-    @staticmethod  
+    @staticmethod
     def format_sentiment_data(news_items: list, x_posts: list) -> str:
         """Format recent news and X posts for prompt"""
         output = "Recent News & Sentiment:\n\n"
-        
+
         # Recent news
         output += "News Headlines:\n"
         for item in news_items[-5:]:  # Last 5 news items
-            title = item.get('title', '')[:100]
-            relevance = item.get('relevance_score', 0)
+            title = item.get("title", "")[:100]
+            relevance = item.get("relevance_score", 0)
             output += f"  • {title}... (relevance: {relevance:.2f})\n"
-        
+
         output += "\nSocial Sentiment (X/Twitter):\n"
         # Recent X posts
         for post in x_posts[-5:]:  # Last 5 posts
-            text = post.get('text', '')[:80]
-            sentiment = post.get('sentiment_score', 0)
-            engagement = post.get('engagement_score', 0)
+            text = post.get("text", "")[:80]
+            sentiment = post.get("sentiment_score", 0)
+            engagement = post.get("engagement_score", 0)
             output += f"  • {text}... (sentiment: {sentiment:.2f}, engagement: {engagement:.2f})\n"
-        
+
         return output

@@ -69,7 +69,19 @@
       "Bash(TA_LIBRARY_PATH=/usr/local/lib TA_INCLUDE_PATH=/usr/local/include pip install TA-Lib)",
       "Bash(pip uninstall:*)",
       "Bash(rg:*)",
-      "Bash(redis-cli:*)"
+      "Bash(redis-cli:*)",
+      "Bash(ruff check:*)",
+      "Bash(mypy:*)",
+      "Bash(pytest:*)",
+      "Bash(newgrp:*)",
+      "Bash(env)",
+      "mcp__ide__executeCode",
+      "Bash(ec2-metadata:*)",
+      "Bash(kill:*)",
+      "Bash(pg_isready:*)",
+      "WebFetch(domain:www.bitget.com)",
+      "WebFetch(domain:bitgetlimited.github.io)",
+      "WebFetch(domain:python-bitget.readthedocs.io)"
     ],
     "deny": []
   }

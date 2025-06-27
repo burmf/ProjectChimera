@@ -2,8 +2,8 @@
 # All magic numbers centralized here per CFG-01 requirements
 
 # Environment settings
-env: "dev"
-debug: true
+env: "prod"
+debug: false
 
 # Database configuration
 database_url: "postgresql+asyncpg://chimera:chimera@localhost:5432/chimera"
@@ -83,7 +83,7 @@ risk:
 # API configuration
 api:
   # Bitget API settings
-  bitget_sandbox: true
+  bitget_sandbox: false
   bitget_rest_url: "https://api.bitget.com"
   bitget_ws_spot_url: "wss://ws.bitget.com/spot/v1/stream"
   bitget_ws_mix_url: "wss://ws.bitget.com/mix/v1/stream"

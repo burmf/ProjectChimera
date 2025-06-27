@@ -218,7 +218,7 @@ services:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf
       - ./nginx/ssl:/etc/nginx/ssl
     depends_on:
-      - trading-bot
+      - chimera-orchestrator
     networks:
       - chimera-network
     profiles:

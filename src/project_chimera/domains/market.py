@@ -7,12 +7,14 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
 from enum import Enum
-from typing import Optional, Dict, Any
+from typing import Any
+
 import pandas as pd
 
 
 class SignalType(Enum):
     """Trading signal types"""
+
     BUY = "BUY"
     SELL = "SELL"
     HOLD = "HOLD"
@@ -20,6 +22,7 @@ class SignalType(Enum):
 
 class SignalStrength(Enum):
     """Signal strength levels"""
+
     WEAK = 0.3
     MEDIUM = 0.6
     STRONG = 0.9
@@ -28,6 +31,7 @@ class SignalStrength(Enum):
 @dataclass(frozen=True)
 class Ticker:
     """Real-time ticker data"""
+
     symbol: str
     price: Decimal
     volume_24h: Decimal
@@ -38,48 +42,50 @@ class Ticker:
 @dataclass(frozen=True)
 class OrderBook:
     """Order book snapshot"""
+
     symbol: str
     bids: list[tuple[Decimal, Decimal]]  # [(price, quantity), ...]
     asks: list[tuple[Decimal, Decimal]]  # [(price, quantity), ...]
     timestamp: datetime
-    
+
     @property
-    def best_bid(self) -> Optional[Decimal]:
+    def best_bid(self) -> Decimal | None:
         """Best bid price"""
         return self.bids[0][0] if self.bids else None
-    
+
     @property
-    def best_ask(self) -> Optional[Decimal]:
+    def best_ask(self) -> Decimal | None:
         """Best ask price"""
         return self.asks[0][0] if self.asks else None
-    
+
     @property
-    def spread(self) -> Optional[Decimal]:
+    def spread(self) -> Decimal | None:
         """Bid-ask spread"""
         if self.best_bid and self.best_ask:
             return self.best_ask - self.best_bid
         return None
-    
+
     @property
-    def imbalance(self) -> Optional[float]:
+    def imbalance(self) -> float | None:
         """Order book imbalance ratio"""
         if not self.bids or not self.asks:
             return None
-        
+
         # Calculate top 5 levels imbalance
         bid_vol = sum(qty for _, qty in self.bids[:5])
         ask_vol = sum(qty for _, qty in self.asks[:5])
         total_vol = bid_vol + ask_vol
-        
+
         if total_vol == 0:
             return 0.0
-        
+
         return float((bid_vol - ask_vol) / total_vol)
 
 
 @dataclass(frozen=True)
 class OHLCV:
     """OHLCV candle data"""
+
     symbol: str
     open: Decimal
     high: Decimal
@@ -93,6 +99,7 @@ class OHLCV:
 @dataclass(frozen=True)
 class FundingRate:
     """Funding rate information"""
+
     symbol: str
     rate: Decimal
     next_funding_time: datetime
@@ -105,24 +112,25 @@ class MarketFrame:
     Unified market data frame containing all market information
     Used as input to strategy signal generation
     """
+
     symbol: str
     timestamp: datetime
-    
+
     # Core price data
-    ticker: Optional[Ticker] = None
-    orderbook: Optional[OrderBook] = None
-    ohlcv_1m: Optional[list[OHLCV]] = None  # Recent 1m candles
-    ohlcv_5m: Optional[list[OHLCV]] = None  # Recent 5m candles
-    ohlcv_1h: Optional[list[OHLCV]] = None  # Recent 1h candles
-    
+    ticker: Ticker | None = None
+    orderbook: OrderBook | None = None
+    ohlcv_1m: list[OHLCV] | None = None  # Recent 1m candles
+    ohlcv_5m: list[OHLCV] | None = None  # Recent 5m candles
+    ohlcv_1h: list[OHLCV] | None = None  # Recent 1h candles
+
     # Funding and fees
-    funding_rate: Optional[FundingRate] = None
-    
+    funding_rate: FundingRate | None = None
+
     # Technical indicators (calculated separately)
-    indicators: Dict[str, Any] = field(default_factory=dict)
-    
+    indicators: dict[str, Any] = field(default_factory=dict)
+
     @property
-    def current_price(self) -> Optional[Decimal]:
+    def current_price(self) -> Decimal | None:
         """Current market price"""
         if self.ticker:
             return self.ticker.price
@@ -131,8 +139,8 @@ class MarketFrame:
         elif self.orderbook and self.orderbook.best_bid and self.orderbook.best_ask:
             return (self.orderbook.best_bid + self.orderbook.best_ask) / 2
         return None
-    
-    def get_ohlcv_df(self, timeframe: str = "1m") -> Optional[pd.DataFrame]:
+
+    def get_ohlcv_df(self, timeframe: str = "1m") -> pd.DataFrame | None:
         """Convert OHLCV data to pandas DataFrame"""
         ohlcv_data = None
         if timeframe == "1m":
@@ -141,50 +149,53 @@ class MarketFrame:
             ohlcv_data = self.ohlcv_5m
         elif timeframe == "1h":
             ohlcv_data = self.ohlcv_1h
-        
+
         if not ohlcv_data:
             return None
-        
+
         data = []
         for candle in ohlcv_data:
-            data.append({
-                'timestamp': candle.timestamp,
-                'open': float(candle.open),
-                'high': float(candle.high),
-                'low': float(candle.low),
-                'close': float(candle.close),
-                'volume': float(candle.volume)
-            })
-        
+            data.append(
+                {
+                    "timestamp": candle.timestamp,
+                    "open": float(candle.open),
+                    "high": float(candle.high),
+                    "low": float(candle.low),
+                    "close": float(candle.close),
+                    "volume": float(candle.volume),
+                }
+            )
+
         df = pd.DataFrame(data)
-        df.set_index('timestamp', inplace=True)
+        df.set_index("timestamp", inplace=True)
         return df
 
 
 @dataclass(frozen=True)
 class Signal:
     """Trading signal generated by strategy"""
+
     symbol: str
     signal_type: SignalType
     strength: SignalStrength
     price: Decimal
     timestamp: datetime
-    
+
     # Signal metadata
     strategy_name: str
     confidence: float  # 0.0 to 1.0
-    target_price: Optional[Decimal] = None
-    stop_loss: Optional[Decimal] = None
-    take_profit: Optional[Decimal] = None
-    
+    target_price: Decimal | None = None
+    stop_loss: Decimal | None = None
+    take_profit: Decimal | None = None
+
     # Additional context
-    indicators_used: Dict[str, Any] = field(default_factory=dict)
+    indicators_used: dict[str, Any] = field(default_factory=dict)
     reasoning: str = ""
-    
+
     def is_valid(self) -> bool:
         """Check if signal is valid"""
         return (
-            0.0 <= self.confidence <= 1.0 and
-            self.price > 0 and
-            self.signal_type in SignalType
+            0.0 <= self.confidence <= 1.0
+            and self.price > 0
+            and self.signal_type in SignalType
         )

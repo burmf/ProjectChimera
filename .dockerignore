@@ -73,10 +73,10 @@ secrets/
 *.cert
 *.crt
 
-# Documentation
+# Documentation (excluding essential files)
 docs/
-*.md
-LICENSE
+# *.md  # Allow README.md for Docker build
+# LICENSE  # Allow LICENSE for Docker build
 
 # Tests
 tests/
@@ -97,6 +97,9 @@ temp/
 # Cache
 .cache/
 *.cache
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
 
 # Jupyter
 .ipynb_checkpoints/

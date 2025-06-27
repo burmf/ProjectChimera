@@ -15,6 +15,8 @@ WORKDIR /app
 
 # Copy dependency files first for better caching
 COPY pyproject.toml ./
+COPY src/ ./src/
+COPY README.md LICENSE ./
 
 # Install dependencies using pip directly (faster than Poetry for production)
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
