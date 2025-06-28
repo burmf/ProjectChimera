@@ -35,6 +35,10 @@ class BitgetAPIClient:
         secret_key: str = "",
         passphrase: str = "",
         sandbox: bool = True,
+        min_request_interval: float = 0.1,
+        timeout_seconds: float = 10.0,
+        max_connections: int = 100,
+        max_keepalive_connections: int = 20,
     ):
         self.api_key = api_key
         self.secret_key = secret_key
@@ -48,13 +52,16 @@ class BitgetAPIClient:
         # HTTP client
         self.client = httpx.AsyncClient(
             base_url=self.base_url,
-            timeout=10.0,
-            limits=httpx.Limits(max_connections=100, max_keepalive_connections=20),
+            timeout=timeout_seconds,
+            limits=httpx.Limits(
+                max_connections=max_connections,
+                max_keepalive_connections=max_keepalive_connections,
+            ),
         )
 
         # Rate limiting
         self.last_request_time = 0.0
-        self.min_request_interval = 0.1  # 100ms between requests
+        self.min_request_interval = min_request_interval
 
     async def close(self):
         """Close HTTP client"""
@@ -72,9 +79,10 @@ class BitgetAPIClient:
         signature = hmac.new(
             self.secret_key.encode("utf-8"), message.encode("utf-8"), hashlib.sha256
         ).digest()
-        
+
         # Base64 encode the signature (Bitget requirement)
         import base64
+
         return base64.b64encode(signature).decode("utf-8")
 
     def _get_headers(
@@ -118,12 +126,17 @@ class BitgetAPIClient:
                 if method.upper() == "GET" and params:
                     # Build query string for signature
                     import urllib.parse
+
                     query_string = urllib.parse.urlencode(sorted(params.items()))
                     request_path = f"{endpoint}?{query_string}"
                 else:
                     request_path = endpoint
-                    
-                headers = self._get_headers(method, request_path, json.dumps(params) if method.upper() != "GET" and params else "")
+
+                headers = self._get_headers(
+                    method,
+                    request_path,
+                    json.dumps(params) if method.upper() != "GET" and params else "",
+                )
             else:
                 headers = {"Content-Type": "application/json"}
 
@@ -188,14 +201,16 @@ class BitgetAPIClient:
                 orderbook_data = data[0]
             else:
                 orderbook_data = data
-                
+
             return {
                 "symbol": symbol,
                 "bids": [
-                    [float(bid[0]), float(bid[1])] for bid in orderbook_data.get("bids", [])
+                    [float(bid[0]), float(bid[1])]
+                    for bid in orderbook_data.get("bids", [])
                 ],
                 "asks": [
-                    [float(ask[0]), float(ask[1])] for ask in orderbook_data.get("asks", [])
+                    [float(ask[0]), float(ask[1])]
+                    for ask in orderbook_data.get("asks", [])
                 ],
                 "timestamp": datetime.now(),
             }
@@ -237,8 +252,13 @@ class BitgetAPIClient:
         endpoint = "/api/v2/spot/market/candles"
         # Convert period format for Bitget API
         period_map = {
-            "1m": "1min", "5m": "5min", "15m": "15min", 
-            "30m": "30min", "1h": "1H", "4h": "4H", "1d": "1D"
+            "1m": "1min",
+            "5m": "5min",
+            "15m": "15min",
+            "30m": "30min",
+            "1h": "1H",
+            "4h": "4H",
+            "1d": "1D",
         }
         granularity = period_map.get(period, "1min")
         params = {"symbol": symbol, "granularity": granularity, "limit": str(limit)}
@@ -331,7 +351,7 @@ class BitgetAPIClient:
                     account_data = data[0]
             else:
                 account_data = data
-                
+
             return {
                 "marginCoin": account_data.get("marginCoin", "USDT"),
                 "locked": float(account_data.get("locked", 0)),
@@ -405,8 +425,10 @@ class BitgetAPIClient:
             if isinstance(data, dict):
                 server_time_ms = data.get("serverTime", int(time.time() * 1000))
             else:
-                server_time_ms = data if isinstance(data, (int, str)) else int(time.time() * 1000)
-                
+                server_time_ms = (
+                    data if isinstance(data, (int, str)) else int(time.time() * 1000)
+                )
+
             return {
                 "status": "online",
                 "server_time": datetime.fromtimestamp(int(server_time_ms) / 1000),
@@ -443,7 +465,7 @@ class BitgetMarketDataService:
             # Use Bitget's standard symbol format (no suffix for v2 API)
             symbols = [
                 "BTCUSDT",
-                "ETHUSDT", 
+                "ETHUSDT",
                 "BNBUSDT",
                 "ADAUSDT",
                 "DOTUSDT",
@@ -504,7 +526,7 @@ class BitgetMarketDataService:
                 # Check if we have actual futures data (not empty response)
                 equity = futures_account.get("equity", 0)
                 usdt_equity = futures_account.get("usdtEquity", 0)
-                
+
                 if equity > 0 or usdt_equity > 0:
                     # Get futures positions for additional P&L data
                     positions = await self.client.get_futures_positions()
@@ -531,7 +553,7 @@ class BitgetMarketDataService:
             if account_info and "error" not in account_info:
                 assets = account_info.get("assets", {})
                 total_value = account_info.get("total_value_usdt", 0)
-                
+
                 # Check if we have actual spot assets
                 if assets or total_value > 0:
                     return {
@@ -604,14 +626,14 @@ class BitgetMarketDataService:
             return {"error": "Authentication required"}
 
         endpoint = "/api/v2/spot/trade/place-order"
-        
+
         body = {
             "symbol": symbol,
             "side": side,  # "buy" or "sell"
             "orderType": order_type,  # "limit", "market"
             "size": str(size),
         }
-        
+
         if order_type == "limit" and price:
             body["price"] = str(price)
 
@@ -664,18 +686,20 @@ class BitgetMarketDataService:
         if data:
             orders = []
             for order in data:
-                orders.append({
-                    "order_id": order.get("orderId", ""),
-                    "symbol": order.get("symbol", ""),
-                    "side": order.get("side", ""),
-                    "size": float(order.get("size", 0)),
-                    "price": float(order.get("price", 0)),
-                    "filled_size": float(order.get("fillSize", 0)),
-                    "status": order.get("status", ""),
-                    "timestamp": datetime.fromtimestamp(
-                        int(order.get("cTime", 0)) / 1000
-                    ),
-                })
+                orders.append(
+                    {
+                        "order_id": order.get("orderId", ""),
+                        "symbol": order.get("symbol", ""),
+                        "side": order.get("side", ""),
+                        "size": float(order.get("size", 0)),
+                        "price": float(order.get("price", 0)),
+                        "filled_size": float(order.get("fillSize", 0)),
+                        "status": order.get("status", ""),
+                        "timestamp": datetime.fromtimestamp(
+                            int(order.get("cTime", 0)) / 1000
+                        ),
+                    }
+                )
             return orders
 
         return []
@@ -691,16 +715,17 @@ def get_bitget_service() -> BitgetMarketDataService:
     if _bitget_service is None:
         # Get credentials from environment
         import os
+
         api_key = os.getenv("BITGET_API_KEY", "")
         secret_key = os.getenv("BITGET_SECRET_KEY", "")
         passphrase = os.getenv("BITGET_PASSPHRASE", "")
         sandbox = os.getenv("BITGET_SANDBOX", "true").lower() == "true"
-        
+
         _bitget_service = BitgetMarketDataService(
             api_key=api_key,
             secret_key=secret_key,
             passphrase=passphrase,
-            sandbox=sandbox
+            sandbox=sandbox,
         )
     return _bitget_service
 
@@ -710,7 +735,7 @@ async def demo_bitget_data():
     # Reset global service to pick up current environment
     global _bitget_service
     _bitget_service = None
-    
+
     service = get_bitget_service()
 
     try:
@@ -730,7 +755,7 @@ async def demo_bitget_data():
         print(f"💼 Portfolio Value: ${portfolio.get('total_value_usdt', 0):,.2f}")
         print(f"📊 Demo Mode: {portfolio.get('demo_mode', True)}")
         print(f"📈 Account Type: {portfolio.get('account_type', 'unknown')}")
-        if portfolio.get('equity'):
+        if portfolio.get("equity"):
             print(f"💰 Real Equity: ${portfolio.get('equity', 0):,.6f}")
 
         return True
@@ -745,7 +770,8 @@ async def demo_bitget_data():
 if __name__ == "__main__":
     # Load environment variables for testing
     from dotenv import load_dotenv
+
     load_dotenv()
-    
+
     # Test the Bitget API
     asyncio.run(demo_bitget_data())

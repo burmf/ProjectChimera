@@ -79,7 +79,7 @@ docs/
 # LICENSE  # Allow LICENSE for Docker build
 
 # Tests
-tests/
+# tests/
 .pytest_cache/
 .coverage
 htmlcov/

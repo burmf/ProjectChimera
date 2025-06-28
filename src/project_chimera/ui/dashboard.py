@@ -359,8 +359,8 @@ class TradingSystemAPI:
                         oldest_trade = stats.first_trade_time
                 if oldest_trade:
                     uptime_seconds = (datetime.now() - oldest_trade).total_seconds()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("dashboard_uptime_error_inner", error=str(e))
 
             return {
                 "chimera_pnl_total_usd": total_pnl,

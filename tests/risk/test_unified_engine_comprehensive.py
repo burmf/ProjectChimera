@@ -38,7 +38,7 @@ class TestUnifiedRiskEngine:
             dd_critical_cooldown_hours=24.0,
             max_leverage=5.0,
             min_confidence=0.3,
-            max_portfolio_vol=0.03
+            max_portfolio_vol=0.03,
         )
 
     @pytest.fixture
@@ -57,7 +57,7 @@ class TestUnifiedRiskEngine:
             timestamp=datetime.now(),
             strategy_name="test_strategy",
             confidence=0.8,
-            reasoning="Strong bullish signal"
+            reasoning="Strong bullish signal",
         )
 
     @pytest.fixture
@@ -73,8 +73,9 @@ class TestUnifiedRiskEngine:
                 close=Decimal("50000"),
                 volume=Decimal("1000"),
                 timestamp=base_time - timedelta(minutes=i),
-                timeframe="1m"
-            ) for i in range(20)
+                timeframe="1m",
+            )
+            for i in range(20)
         ]
 
     def test_initialization(self, risk_config):
@@ -96,11 +97,9 @@ class TestUnifiedRiskEngine:
     @pytest.mark.asyncio
     async def test_calculate_position_size_basic(self, risk_engine, sample_signal):
         """Test basic position size calculation"""
-        with patch.object(risk_engine, '_get_portfolio_value', return_value=100000.0):
+        with patch.object(risk_engine, "_get_portfolio_value", return_value=100000.0):
             decision = await risk_engine.calculate_position_size(
-                signal=sample_signal,
-                current_price=50000.0,
-                portfolio_value=100000.0
+                signal=sample_signal, current_price=50000.0, portfolio_value=100000.0
             )
 
         assert isinstance(decision, UnifiedRiskDecision)
@@ -111,24 +110,27 @@ class TestUnifiedRiskEngine:
         assert decision.reasoning is not None
 
     @pytest.mark.asyncio
-    async def test_calculate_position_size_with_portfolio_value(self, risk_engine, sample_signal):
+    async def test_calculate_position_size_with_portfolio_value(
+        self, risk_engine, sample_signal
+    ):
         """Test position calculation with provided portfolio value"""
         decision = await risk_engine.calculate_position_size(
-            signal=sample_signal,
-            current_price=50000.0,
-            portfolio_value=120000.0
+            signal=sample_signal, current_price=50000.0, portfolio_value=120000.0
         )
 
         assert decision.can_trade is True
         assert decision.position_size_pct > 0.0
 
     @pytest.mark.asyncio
-    async def test_calculate_position_size_await_portfolio_value(self, risk_engine, sample_signal):
+    async def test_calculate_position_size_await_portfolio_value(
+        self, risk_engine, sample_signal
+    ):
         """Test position calculation when awaiting portfolio value"""
-        with patch.object(risk_engine, '_get_portfolio_value', return_value=110000.0) as mock_get_value:
+        with patch.object(
+            risk_engine, "_get_portfolio_value", return_value=110000.0
+        ) as mock_get_value:
             decision = await risk_engine.calculate_position_size(
-                signal=sample_signal,
-                current_price=50000.0
+                signal=sample_signal, current_price=50000.0
             )
 
             mock_get_value.assert_called_once()
@@ -141,9 +143,7 @@ class TestUnifiedRiskEngine:
         risk_engine.dd_guard.update_equity(50000.0, datetime.now())  # 50% loss
 
         decision = await risk_engine.calculate_position_size(
-            signal=sample_signal,
-            current_price=50000.0,
-            portfolio_value=50000.0
+            signal=sample_signal, current_price=50000.0, portfolio_value=50000.0
         )
 
         assert decision.can_trade is False
@@ -161,13 +161,11 @@ class TestUnifiedRiskEngine:
             timestamp=datetime.now(),
             strategy_name="test_strategy",
             confidence=0.2,  # Below min_confidence
-            reasoning="Weak signal"
+            reasoning="Weak signal",
         )
 
         decision = await risk_engine.calculate_position_size(
-            signal=low_conf_signal,
-            current_price=50000.0,
-            portfolio_value=100000.0
+            signal=low_conf_signal, current_price=50000.0, portfolio_value=100000.0
         )
 
         # Should still allow trading but with reduced position
@@ -181,13 +179,14 @@ class TestUnifiedRiskEngine:
         risk_engine.config.max_portfolio_vol = 0.01  # Very low limit
 
         decision = await risk_engine.calculate_position_size(
-            signal=sample_signal,
-            current_price=50000.0,
-            portfolio_value=100000.0
+            signal=sample_signal, current_price=50000.0, portfolio_value=100000.0
         )
 
         assert decision.can_trade is True
-        assert "volatility_limit" in decision.primary_constraint or decision.position_size_pct <= 0.05
+        assert (
+            "volatility_limit" in decision.primary_constraint
+            or decision.position_size_pct <= 0.05
+        )
 
     def test_update_trade_result(self, risk_engine):
         """Test trade result updates"""
@@ -230,7 +229,7 @@ class TestUnifiedRiskEngine:
             price=Decimal("50000"),
             timestamp=datetime.now(),
             strategy_name="test_strategy",
-            confidence=0.8
+            confidence=0.8,
         )
 
         size, method, confidence = risk_engine._calculate_base_size(
@@ -238,7 +237,7 @@ class TestUnifiedRiskEngine:
         )
 
         assert size > 0.0
-        assert method in ['kelly', 'atr', 'conservative']
+        assert method in ["kelly", "atr", "conservative"]
         assert 0.0 <= confidence <= 1.0
 
     def test_calculate_base_size_fallback(self, risk_engine):
@@ -248,15 +247,27 @@ class TestUnifiedRiskEngine:
         from project_chimera.risk.dyn_kelly import DynamicKellyResult
 
         kelly_result = DynamicKellyResult(
-            kelly_fraction=0.0, ewma_win_rate=0.5, ewma_avg_win=0.0,
-            ewma_avg_loss=0.0, raw_kelly=0.0, vol_adjustment_factor=1.0,
-            confidence_score=0.0, sample_size=5, last_updated=datetime.now()
+            kelly_fraction=0.0,
+            ewma_win_rate=0.5,
+            ewma_avg_win=0.0,
+            ewma_avg_loss=0.0,
+            raw_kelly=0.0,
+            vol_adjustment_factor=1.0,
+            confidence_score=0.0,
+            sample_size=5,
+            last_updated=datetime.now(),
         )
 
         atr_result = ATRTargetResult(
-            position_size_pct=0.0, current_atr=0.0, daily_vol_estimate=0.0,
-            vol_target_ratio=1.0, regime_adjustment=1.0, confidence_score=0.0,
-            target_met=False, last_updated=datetime.now(), price_level=50000.0
+            position_size_pct=0.0,
+            current_atr=0.0,
+            daily_vol_estimate=0.0,
+            vol_target_ratio=1.0,
+            regime_adjustment=1.0,
+            confidence_score=0.0,
+            target_met=False,
+            last_updated=datetime.now(),
+            price_level=50000.0,
         )
 
         sample_signal = Signal(
@@ -266,7 +277,7 @@ class TestUnifiedRiskEngine:
             price=Decimal("50000"),
             timestamp=datetime.now(),
             strategy_name="test_strategy",
-            confidence=0.6
+            confidence=0.6,
         )
 
         size, method, confidence = risk_engine._calculate_base_size(
@@ -274,16 +285,22 @@ class TestUnifiedRiskEngine:
         )
 
         assert size == 0.05  # Conservative 5%
-        assert method == 'conservative'
+        assert method == "conservative"
 
     def test_apply_volatility_limits_scaling(self, risk_engine):
         """Test volatility limits with scaling"""
         from project_chimera.risk.atr_target import ATRTargetResult
 
         atr_result = ATRTargetResult(
-            position_size_pct=0.1, current_atr=1000.0, daily_vol_estimate=0.05,  # High volatility
-            vol_target_ratio=1.0, regime_adjustment=1.0, confidence_score=0.8,
-            target_met=True, last_updated=datetime.now(), price_level=50000.0
+            position_size_pct=0.1,
+            current_atr=1000.0,
+            daily_vol_estimate=0.05,  # High volatility
+            vol_target_ratio=1.0,
+            regime_adjustment=1.0,
+            confidence_score=0.8,
+            target_met=True,
+            last_updated=datetime.now(),
+            price_level=50000.0,
         )
 
         # High position size that would exceed volatility limit
@@ -296,7 +313,10 @@ class TestUnifiedRiskEngine:
 
         # Should be scaled down
         assert limited_size < position_size
-        assert limited_size * atr_result.daily_vol_estimate <= risk_engine.config.max_portfolio_vol * 1.01
+        assert (
+            limited_size * atr_result.daily_vol_estimate
+            <= risk_engine.config.max_portfolio_vol * 1.01
+        )
 
     def test_calculate_leverage(self, risk_engine):
         """Test leverage calculation"""
@@ -344,20 +364,36 @@ class TestUnifiedRiskEngine:
         from project_chimera.risk.dyn_kelly import DynamicKellyResult
 
         kelly_result = DynamicKellyResult(
-            kelly_fraction=0.1, ewma_win_rate=0.6, ewma_avg_win=0.02,
-            ewma_avg_loss=0.01, raw_kelly=0.1, vol_adjustment_factor=1.0,
-            confidence_score=0.8, sample_size=25, last_updated=datetime.now()
+            kelly_fraction=0.1,
+            ewma_win_rate=0.6,
+            ewma_avg_win=0.02,
+            ewma_avg_loss=0.01,
+            raw_kelly=0.1,
+            vol_adjustment_factor=1.0,
+            confidence_score=0.8,
+            sample_size=25,
+            last_updated=datetime.now(),
         )
 
         atr_result = ATRTargetResult(
-            position_size_pct=0.1, current_atr=1000.0, daily_vol_estimate=0.02,
-            vol_target_ratio=1.0, regime_adjustment=1.0, confidence_score=0.7,
-            target_met=True, last_updated=datetime.now(), price_level=50000.0
+            position_size_pct=0.1,
+            current_atr=1000.0,
+            daily_vol_estimate=0.02,
+            vol_target_ratio=1.0,
+            regime_adjustment=1.0,
+            confidence_score=0.7,
+            target_met=True,
+            last_updated=datetime.now(),
+            price_level=50000.0,
         )
 
         dd_state = DDGuardState(
-            tier=DDGuardTier.NORMAL, drawdown_pct=0.02, position_multiplier=1.0,
-            warning_cooldown_until=None, critical_cooldown_until=None, last_updated=datetime.now()
+            tier=DDGuardTier.NORMAL,
+            drawdown_pct=0.02,
+            position_multiplier=1.0,
+            warning_cooldown_until=None,
+            critical_cooldown_until=None,
+            last_updated=datetime.now(),
         )
 
         sample_signal = Signal(
@@ -367,7 +403,7 @@ class TestUnifiedRiskEngine:
             price=Decimal("50000"),
             timestamp=datetime.now(),
             strategy_name="test_strategy",
-            confidence=0.8
+            confidence=0.8,
         )
 
         confidence = risk_engine._calculate_overall_confidence(
@@ -390,28 +426,50 @@ class TestUnifiedRiskEngine:
             price=Decimal("50000"),
             timestamp=datetime.now(),
             strategy_name="test_strategy",
-            confidence=0.8
+            confidence=0.8,
         )
 
         kelly_result = DynamicKellyResult(
-            kelly_fraction=0.1, ewma_win_rate=0.6, ewma_avg_win=0.02,
-            ewma_avg_loss=0.01, raw_kelly=0.1, vol_adjustment_factor=1.0,
-            confidence_score=0.8, sample_size=25, last_updated=datetime.now()
+            kelly_fraction=0.1,
+            ewma_win_rate=0.6,
+            ewma_avg_win=0.02,
+            ewma_avg_loss=0.01,
+            raw_kelly=0.1,
+            vol_adjustment_factor=1.0,
+            confidence_score=0.8,
+            sample_size=25,
+            last_updated=datetime.now(),
         )
 
         atr_result = ATRTargetResult(
-            position_size_pct=0.1, current_atr=1000.0, daily_vol_estimate=0.02,
-            vol_target_ratio=1.0, regime_adjustment=1.0, confidence_score=0.7,
-            target_met=True, last_updated=datetime.now(), price_level=50000.0
+            position_size_pct=0.1,
+            current_atr=1000.0,
+            daily_vol_estimate=0.02,
+            vol_target_ratio=1.0,
+            regime_adjustment=1.0,
+            confidence_score=0.7,
+            target_met=True,
+            last_updated=datetime.now(),
+            price_level=50000.0,
         )
 
         dd_state = DDGuardState(
-            tier=DDGuardTier.NORMAL, drawdown_pct=0.02, position_multiplier=1.0,
-            warning_cooldown_until=None, critical_cooldown_until=None, last_updated=datetime.now()
+            tier=DDGuardTier.NORMAL,
+            drawdown_pct=0.02,
+            position_multiplier=1.0,
+            warning_cooldown_until=None,
+            critical_cooldown_until=None,
+            last_updated=datetime.now(),
         )
 
         reasoning = risk_engine._generate_reasoning(
-            sample_signal, kelly_result, atr_result, dd_state, 0.1, "kelly", "normal_sizing"
+            sample_signal,
+            kelly_result,
+            atr_result,
+            dd_state,
+            0.1,
+            "kelly",
+            "normal_sizing",
         )
 
         assert isinstance(reasoning, str)
@@ -422,36 +480,48 @@ class TestUnifiedRiskEngine:
     @pytest.mark.asyncio
     async def test_health_check(self, risk_engine):
         """Test async health check"""
-        with patch.object(risk_engine, '_get_portfolio_value', return_value=100000.0), patch.object(risk_engine, '_get_trade_statistics', return_value={
-                'win_rate': 0.6, 'avg_win': 0.02, 'avg_loss': 0.01, 'total_trades': 50
-            }):
+        with (
+            patch.object(risk_engine, "_get_portfolio_value", return_value=100000.0),
+            patch.object(
+                risk_engine,
+                "_get_trade_statistics",
+                return_value={
+                    "win_rate": 0.6,
+                    "avg_win": 0.02,
+                    "avg_loss": 0.01,
+                    "total_trades": 50,
+                },
+            ),
+        ):
             health = await risk_engine.health_check()
 
-        assert health['status'] == 'healthy'
-        assert health['portfolio_value'] == 100000.0
-        assert health['can_trade'] is True
-        assert 'dd_tier' in health
+        assert health["status"] == "healthy"
+        assert health["portfolio_value"] == 100000.0
+        assert health["can_trade"] is True
+        assert "dd_tier" in health
 
     @pytest.mark.asyncio
     async def test_health_check_error(self, risk_engine):
         """Test health check with error"""
-        with patch.object(risk_engine, '_get_portfolio_value', side_effect=Exception("Network error")):
+        with patch.object(
+            risk_engine, "_get_portfolio_value", side_effect=Exception("Network error")
+        ):
             health = await risk_engine.health_check()
 
-        assert health['status'] == 'error'
-        assert 'error' in health
+        assert health["status"] == "error"
+        assert "error" in health
 
     def test_get_statistics(self, risk_engine):
         """Test comprehensive statistics retrieval"""
         stats = risk_engine.get_statistics()
 
-        assert 'engine' in stats
-        assert 'kelly' in stats
-        assert 'atr' in stats
-        assert 'drawdown' in stats
+        assert "engine" in stats
+        assert "kelly" in stats
+        assert "atr" in stats
+        assert "drawdown" in stats
 
-        assert stats['engine']['decision_count'] == 0
-        assert 'config' in stats['engine']
+        assert stats["engine"]["decision_count"] == 0
+        assert "config" in stats["engine"]
 
     def test_hot_reload_config(self, risk_engine):
         """Test hot configuration reload"""
@@ -467,7 +537,7 @@ class TestUnifiedRiskEngine:
             atr_max_position=0.25,
             dd_caution_threshold=0.03,
             dd_warning_threshold=0.08,
-            dd_critical_threshold=0.15
+            dd_critical_threshold=0.15,
         )
 
         risk_engine.hot_reload_config(new_config)
@@ -511,7 +581,7 @@ class TestUnifiedRiskEngine:
 
     def test_config_from_settings(self):
         """Test config creation from settings"""
-        with patch('project_chimera.risk.unified_engine.get_settings') as mock_settings:
+        with patch("project_chimera.risk.unified_engine.get_settings") as mock_settings:
             mock_risk = MagicMock()
             mock_risk.kelly_base_fraction = 0.3
             mock_risk.kelly_ewma_alpha = 0.1
@@ -550,25 +620,41 @@ class TestUnifiedRiskEngine:
             can_trade=True,
             confidence=0.7,
             kelly_result=DynamicKellyResult(
-                kelly_fraction=0.1, ewma_win_rate=0.6, ewma_avg_win=0.02,
-                ewma_avg_loss=0.01, raw_kelly=0.1, vol_adjustment_factor=1.0,
-                confidence_score=0.8, sample_size=25, last_updated=datetime.now()
+                kelly_fraction=0.1,
+                ewma_win_rate=0.6,
+                ewma_avg_win=0.02,
+                ewma_avg_loss=0.01,
+                raw_kelly=0.1,
+                vol_adjustment_factor=1.0,
+                confidence_score=0.8,
+                sample_size=25,
+                last_updated=datetime.now(),
             ),
             atr_result=ATRTargetResult(
-                position_size_pct=0.1, current_atr=1000.0, daily_vol_estimate=0.02,
-                vol_target_ratio=1.0, regime_adjustment=1.0, confidence_score=0.7,
-                target_met=True, last_updated=datetime.now(), price_level=50000.0
+                position_size_pct=0.1,
+                current_atr=1000.0,
+                daily_vol_estimate=0.02,
+                vol_target_ratio=1.0,
+                regime_adjustment=1.0,
+                confidence_score=0.7,
+                target_met=True,
+                last_updated=datetime.now(),
+                price_level=50000.0,
             ),
             dd_state=DDGuardState(
-                tier=DDGuardTier.NORMAL, drawdown_pct=0.02, position_multiplier=1.0,
-                warning_cooldown_until=None, critical_cooldown_until=None, last_updated=datetime.now()
+                tier=DDGuardTier.NORMAL,
+                drawdown_pct=0.02,
+                position_multiplier=1.0,
+                warning_cooldown_until=None,
+                critical_cooldown_until=None,
+                last_updated=datetime.now(),
             ),
             estimated_daily_vol=0.002,
             risk_adjusted_return=0.5,
             max_loss_estimate=0.004,
             primary_constraint="normal_sizing",
             sizing_method="kelly",
-            reasoning="Test decision"
+            reasoning="Test decision",
         )
 
         assert decision.is_valid() is True

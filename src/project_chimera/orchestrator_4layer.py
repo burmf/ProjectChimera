@@ -1,6 +1,14 @@
 """
 Enhanced 4-Layer Trading Orchestrator for ProjectChimera
 Integrates data collection, AI decisions, execution, and logging
+
+Design Reference: CLAUDE.md - Architecture Section 2 (4-Layer System)
+Related Classes:
+- DataFeed: BitgetWebSocketFeed (data layer)
+- Strategies: StrategyBase and 7 MVP strategies (signal layer)
+- Risk: UnifiedRiskEngine with Dyn-Kelly/ATR/DD-Guard (risk layer)
+- Execution: BitgetExecutionEngine (execution layer)
+- Monitor: PromExporter + PerformanceLogger (monitoring layer)
 """
 
 import asyncio
@@ -40,7 +48,7 @@ class ProjectChimera4LayerOrchestrator:
     Layer 4: Logging (Learning Data + Performance Tracking)
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.settings: Settings = get_settings()
         self.layer_settings = self.settings.layer_system
 
@@ -71,7 +79,7 @@ class ProjectChimera4LayerOrchestrator:
             "total_pnl": 0.0,
         }
 
-    async def start(self):
+    async def start(self) -> None:
         """Start the complete 4-layer trading system"""
         if self._running:
             logger.warning("Orchestrator already running")
@@ -81,24 +89,9 @@ class ProjectChimera4LayerOrchestrator:
         self.stats["start_time"] = datetime.now()
 
         try:
-            # Layer 1: Initialize Redis Streams Pipeline
-            await self._start_layer1_data_pipeline()
-
-            # Layer 2: Initialize AI Decision Engine
-            await self._start_layer2_ai_engine()
-
-            # Layer 3: Initialize Risk Management & Execution
-            await self._start_layer3_execution()
-
-            # Layer 4: Initialize Logging & Learning Data
-            await self._start_layer4_logging()
-
-            # Start data flow
+            await self._initialize_all_layers()
             await self._start_data_flow()
-
-            self._running = True
-            self._startup_complete = True
-
+            self._mark_startup_complete()
             logger.info("✅ ProjectChimera 4-Layer System started successfully")
 
         except Exception as e:
@@ -106,7 +99,26 @@ class ProjectChimera4LayerOrchestrator:
             await self.stop()
             raise
 
-    async def stop(self):
+    async def _initialize_all_layers(self) -> None:
+        """Initialize all system layers in sequence"""
+        # Layer 1: Initialize Redis Streams Pipeline
+        await self._start_layer1_data_pipeline()
+
+        # Layer 2: Initialize AI Decision Engine
+        await self._start_layer2_ai_engine()
+
+        # Layer 3: Initialize Risk Management & Execution
+        await self._start_layer3_execution()
+
+        # Layer 4: Initialize Logging & Learning Data
+        await self._start_layer4_logging()
+
+    def _mark_startup_complete(self) -> None:
+        """Mark orchestrator as successfully started"""
+        self._running = True
+        self._startup_complete = True
+
+    async def stop(self) -> None:
         """Stop the complete 4-layer trading system"""
         logger.info("🛑 Stopping ProjectChimera 4-Layer Trading System")
 
@@ -132,7 +144,7 @@ class ProjectChimera4LayerOrchestrator:
 
         logger.info("✅ ProjectChimera 4-Layer System stopped")
 
-    async def _start_layer1_data_pipeline(self):
+    async def _start_layer1_data_pipeline(self) -> None:
         """Layer 1: Data Collection - Redis Streams + Collectors"""
         logger.info("📡 Starting Layer 1: Data Collection")
 
@@ -159,10 +171,15 @@ class ProjectChimera4LayerOrchestrator:
 
         logger.info("✅ Layer 1 (Data Collection) initialized")
 
-    async def _start_layer2_ai_engine(self):
+    async def _start_layer2_ai_engine(self) -> None:
         """Layer 2: AI Decision Engine - OpenAI o3 Integration"""
-        if not self.layer_settings.ai.enable_1min_decisions and not self.layer_settings.ai.enable_1hour_strategy:
-            logger.info("🚫 AI layer disabled as both decision types are off in settings.")
+        if (
+            not self.layer_settings.ai.enable_1min_decisions
+            and not self.layer_settings.ai.enable_1hour_strategy
+        ):
+            logger.info(
+                "🚫 AI layer disabled as both decision types are off in settings."
+            )
             self.ai_decision_engine = None
             return
 
@@ -182,7 +199,7 @@ class ProjectChimera4LayerOrchestrator:
         await self.ai_decision_engine.start()
         logger.info("✅ Layer 2 (AI Decision Engine) initialized")
 
-    async def _start_layer3_execution(self):
+    async def _start_layer3_execution(self) -> None:
         """Layer 3: Execution - Risk Management + Order Placement"""
         logger.info("⚡ Starting Layer 3: Risk Management & Execution")
 
@@ -210,12 +227,12 @@ class ProjectChimera4LayerOrchestrator:
         )
         logger.info("✅ Layer 3 (Risk Management & Execution) initialized")
 
-    async def _start_layer4_logging(self):
+    async def _start_layer4_logging(self) -> None:
         """Layer 4: Logging - Learning Data + Performance Tracking"""
         logger.info("📊 Starting Layer 4: Logging & Learning Data")
         logger.info("✅ Layer 4 (Logging & Learning Data) initialized")
 
-    async def _start_data_flow(self):
+    async def _start_data_flow(self) -> None:
         """Start the data flow between all layers"""
         logger.info("🔄 Starting inter-layer data flow")
 
@@ -254,11 +271,11 @@ class ProjectChimera4LayerOrchestrator:
         await self._start_market_data_feed()
         logger.info("✅ Data flow between layers established")
 
-    async def _start_market_data_feed(self):
+    async def _start_market_data_feed(self) -> None:
         """Start market data feed and connect to Redis Streams"""
         logger.info("✅ Market data feed connected to Redis Streams")
 
-    async def _handle_market_data_message(self, message: MarketDataMessage):
+    async def _handle_market_data_message(self, message: MarketDataMessage) -> None:
         """Handle market data messages from Layer 1"""
         try:
             if self.ai_decision_engine:
@@ -268,7 +285,7 @@ class ProjectChimera4LayerOrchestrator:
         except Exception as e:
             logger.exception(f"Error handling market data: {e}")
 
-    async def _handle_news_message(self, message: NewsMessage):
+    async def _handle_news_message(self, message: NewsMessage) -> None:
         """Handle news messages from Layer 1"""
         try:
             if self.ai_decision_engine:
@@ -280,7 +297,7 @@ class ProjectChimera4LayerOrchestrator:
         except Exception as e:
             logger.exception(f"Error handling news: {e}")
 
-    async def _handle_x_posts_message(self, message: XPostMessage):
+    async def _handle_x_posts_message(self, message: XPostMessage) -> None:
         """Handle X posts messages from Layer 1"""
         try:
             if self.ai_decision_engine:
@@ -292,7 +309,7 @@ class ProjectChimera4LayerOrchestrator:
         except Exception as e:
             logger.exception(f"Error handling X post: {e}")
 
-    async def _handle_ai_decision_message(self, message: AIDecisionMessage):
+    async def _handle_ai_decision_message(self, message: AIDecisionMessage) -> None:
         """Handle AI decision messages from Layer 2"""
         try:
             risk_decision = await self._process_through_risk_engine(message)
@@ -358,15 +375,17 @@ class ProjectChimera4LayerOrchestrator:
             logger.exception(f"Error in trade execution: {e}")
             return None
 
-    async def _store_news_for_learning(self, news: NewsMessage):
+    async def _store_news_for_learning(self, news: NewsMessage) -> None:
         """Store news data for AI learning"""
         pass
 
-    async def _store_x_post_for_learning(self, post: XPostMessage):
+    async def _store_x_post_for_learning(self, post: XPostMessage) -> None:
         """Store X post data for AI learning"""
         pass
 
-    async def _store_ai_decision_for_learning(self, decision: AIDecisionMessage):
+    async def _store_ai_decision_for_learning(
+        self, decision: AIDecisionMessage
+    ) -> None:
         """Store AI decision context for learning"""
         pass
 

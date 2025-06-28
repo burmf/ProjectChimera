@@ -58,10 +58,7 @@ class NewsMessage(StreamMessage):
     sentiment_score: float | None = None
     tags: list[str] = field(default_factory=list)
     relevance_score: float | None = None
-    message_type: str = field(default="news", init=False)
-
-    def __post_init__(self):
-        self.message_type = "news"
+    message_type: str = field(default="news")
 
 
 @dataclass

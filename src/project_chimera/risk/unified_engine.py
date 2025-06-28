@@ -1,6 +1,13 @@
 """
 Unified Risk Engine - Phase D Implementation
 Integrates Dynamic Kelly, ATR Target, and DD Guard systems
+
+Design Reference: CLAUDE.md - Risk-Engine Section 6 (Dyn-Kelly/ATR/DD rules)
+Related Classes:
+- DynamicKellyCalculator: Position sizing with win rate adaptation
+- ATRTargetController: Volatility-based sizing with target_vol/ATR formula
+- DDGuardSystem: Drawdown protection (10%->0.5x, 20%->flat+pause)
+- EquityCache: Real-time equity tracking for risk calculations
 """
 
 import logging

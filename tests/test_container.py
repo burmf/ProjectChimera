@@ -2,7 +2,6 @@
 Tests for container.py - simple dependency injection container
 """
 
-
 from project_chimera.container import Container
 
 
@@ -12,7 +11,7 @@ class TestContainer:
     def test_container_initialization(self):
         """Test container initialization"""
         container = Container()
-        assert hasattr(container, 'config')
+        assert hasattr(container, "config")
         assert container.config is not None
 
     def test_container_wiring(self):
@@ -30,7 +29,7 @@ class TestContainer:
         container = Container()
 
         # Check that expected providers exist
-        expected_providers = ['config']
+        expected_providers = ["config"]
         for provider_name in expected_providers:
             assert hasattr(container, provider_name)
 

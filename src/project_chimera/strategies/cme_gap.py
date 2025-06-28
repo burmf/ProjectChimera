@@ -57,7 +57,7 @@ class CMEGapStrategy(Strategy):
             "lookback_periods": 200,  # Need enough data to detect gaps
         }
 
-    def generate_signal(self, market_data: MarketFrame) -> Signal | None:
+    async def generate_signal(self, market_data: MarketFrame) -> Signal | None:
         """Generate CME gap fill signal"""
         if (
             not market_data.ohlcv_1h or len(market_data.ohlcv_1h) < 72

@@ -1,0 +1,15 @@
+global:
+  scrape_interval: 15s # By default, scrape targets every 15 seconds.
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'chimera-orchestrator'
+    static_configs:
+      - targets: ['chimera-orchestrator:8001'] # Assuming orchestrator exposes metrics on port 8001
+
+  - job_name: 'chimera-data-collectors'
+    static_configs:
+      - targets: ['chimera-data-collectors:8001'] # Assuming data collectors expose metrics on port 8001

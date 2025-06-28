@@ -5,7 +5,7 @@ ProjectChimera システム監視ダッシュボード
 
 import time
 from datetime import datetime, timedelta
-from typing import Any, Dict
+from typing import Any
 
 import pandas as pd
 import plotly.express as px
@@ -165,7 +165,8 @@ class SystemMonitor:
                             text(f"SELECT COUNT(*) FROM {table}")
                         )
                         tables[table] = count_result.scalar()
-                    except:
+                    except Exception as e:
+                        logger.warning(f"Failed to get table count for {table}: {e}")
                         tables[table] = "N/A"
 
                 return {"status": "healthy", "connection": "active", "tables": tables}

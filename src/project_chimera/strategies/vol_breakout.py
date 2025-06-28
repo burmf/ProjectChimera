@@ -56,7 +56,7 @@ class VolatilityBreakoutStrategy(TechnicalStrategy):
             "lookback_periods": max(self.params["bb_period"] * 2, 50),
         }
 
-    def generate_signal(self, market_data: MarketFrame) -> Signal | None:
+    async def generate_signal(self, market_data: MarketFrame) -> Signal | None:
         """Generate volatility breakout signal"""
         if (
             not market_data.ohlcv_15m

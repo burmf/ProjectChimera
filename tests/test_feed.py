@@ -67,10 +67,10 @@ class TestBitgetWebSocketFeed:
     def feed_config(self):
         """Standard feed configuration for testing"""
         return {
-            'api_key': 'test_key',
-            'secret_key': 'test_secret',
-            'passphrase': 'test_passphrase',
-            'sandbox': True
+            "api_key": "test_key",
+            "secret_key": "test_secret",
+            "passphrase": "test_passphrase",
+            "sandbox": True,
         }
 
     @pytest.fixture
@@ -116,8 +116,8 @@ class TestBitgetWebSocketFeed:
             await ws_feed.connect()
 
     @pytest.mark.asyncio
-    @patch('websockets.connect')
-    @patch('httpx.AsyncClient')
+    @patch("websockets.connect")
+    @patch("httpx.AsyncClient")
     async def test_successful_connection(self, mock_http, mock_ws, ws_feed):
         """Test successful WebSocket connection"""
         # Mock HTTP client
@@ -139,7 +139,7 @@ class TestBitgetWebSocketFeed:
         assert ws_feed.http_client is not None
 
     @pytest.mark.asyncio
-    @patch('httpx.AsyncClient')
+    @patch("httpx.AsyncClient")
     async def test_connection_failure_increments_counter(self, mock_http, ws_feed):
         """Test connection failure handling"""
         # Mock HTTP client to raise exception
@@ -152,7 +152,7 @@ class TestBitgetWebSocketFeed:
         assert ws_feed.status == ConnectionStatus.FAILED
 
     @pytest.mark.asyncio
-    @patch('httpx.AsyncClient')
+    @patch("httpx.AsyncClient")
     async def test_circuit_breaker_activation_after_failures(self, mock_http, ws_feed):
         """Test circuit breaker activation after max failures"""
         # Mock HTTP client to always fail
@@ -231,14 +231,16 @@ class TestBitgetWebSocketFeed:
 
     def test_message_processing_ticker(self, ws_feed):
         """Test ticker message processing"""
-        ticker_data = [{
-            "instId": "BTCUSDT",
-            "last": "50000.0",
-            "bidPx": "49990.0",
-            "askPx": "50010.0",
-            "vol24h": "1000.0",
-            "change24h": "0.05"
-        }]
+        ticker_data = [
+            {
+                "instId": "BTCUSDT",
+                "last": "50000.0",
+                "bidPx": "49990.0",
+                "askPx": "50010.0",
+                "vol24h": "1000.0",
+                "change24h": "0.05",
+            }
+        ]
 
         # Process ticker message
         asyncio.run(ws_feed._handle_ticker(ticker_data, {}))
@@ -252,11 +254,13 @@ class TestBitgetWebSocketFeed:
 
     def test_message_processing_orderbook(self, ws_feed):
         """Test orderbook message processing"""
-        book_data = [{
-            "instId": "BTCUSDT",
-            "bids": [["49990.0", "1.5"], ["49980.0", "2.0"]],
-            "asks": [["50010.0", "1.2"], ["50020.0", "1.8"]]
-        }]
+        book_data = [
+            {
+                "instId": "BTCUSDT",
+                "bids": [["49990.0", "1.5"], ["49980.0", "2.0"]],
+                "asks": [["50010.0", "1.2"], ["50020.0", "1.8"]],
+            }
+        ]
 
         # Process orderbook message
         asyncio.run(ws_feed._handle_orderbook(book_data, {}))
@@ -271,11 +275,13 @@ class TestBitgetWebSocketFeed:
 
     def test_message_processing_funding_rate(self, ws_feed):
         """Test funding rate message processing"""
-        funding_data = [{
-            "instId": "BTCUSDT",
-            "fundingRate": "0.0001",
-            "fundingTime": "2024-01-01T08:00:00.000Z"
-        }]
+        funding_data = [
+            {
+                "instId": "BTCUSDT",
+                "fundingRate": "0.0001",
+                "fundingTime": "2024-01-01T08:00:00.000Z",
+            }
+        ]
 
         # Process funding rate message
         asyncio.run(ws_feed._handle_funding_rate(funding_data, {}))
@@ -287,10 +293,7 @@ class TestBitgetWebSocketFeed:
 
     def test_message_processing_open_interest(self, ws_feed):
         """Test open interest message processing"""
-        oi_data = [{
-            "instId": "BTCUSDT",
-            "oi": "1000000.0"
-        }]
+        oi_data = [{"instId": "BTCUSDT", "oi": "1000000.0"}]
 
         # Process open interest message
         asyncio.run(ws_feed._handle_open_interest(oi_data, {}))
@@ -305,10 +308,7 @@ class TestBitgetWebSocketFeed:
         ping_time = time.time()
         pong_time = ping_time + 0.05  # 50ms latency
 
-        pong_message = json.dumps({
-            "event": "pong",
-            "ping_time": ping_time
-        })
+        pong_message = json.dumps({"event": "pong", "ping_time": ping_time})
 
         await ws_feed._process_message(pong_message, "spot", pong_time)
 
@@ -334,27 +334,27 @@ class TestBitgetSubscriptionMethods:
     @pytest.fixture
     def ws_feed(self):
         """Create WebSocket feed for subscription testing"""
-        config = {'sandbox': True}
+        config = {"sandbox": True}
         return BitgetWebSocketFeed("test", config)
 
     @pytest.mark.asyncio
     async def test_subscribe_ticker_spot(self, ws_feed):
         """Test ticker subscription for spot symbol"""
-        with patch.object(ws_feed, '_subscribe_spot_channel') as mock_spot:
+        with patch.object(ws_feed, "_subscribe_spot_channel") as mock_spot:
             await ws_feed.subscribe_ticker("BTCEUR")
             mock_spot.assert_called_once_with("ticker.BTCEUR")
 
     @pytest.mark.asyncio
     async def test_subscribe_ticker_futures(self, ws_feed):
         """Test ticker subscription for futures symbol"""
-        with patch.object(ws_feed, '_subscribe_mix_channel') as mock_mix:
+        with patch.object(ws_feed, "_subscribe_mix_channel") as mock_mix:
             await ws_feed.subscribe_ticker("BTCUSDT")
             mock_mix.assert_called_once_with("ticker.BTCUSDT")
 
     @pytest.mark.asyncio
     async def test_subscribe_orderbook_depth_selection(self, ws_feed):
         """Test orderbook subscription depth selection"""
-        with patch.object(ws_feed, '_subscribe_spot_channel') as mock_spot:
+        with patch.object(ws_feed, "_subscribe_spot_channel") as mock_spot:
             # 5 levels should use books5
             await ws_feed.subscribe_orderbook("BTCEUR", levels=5)
             mock_spot.assert_called_once_with("books5.BTCEUR")
@@ -377,14 +377,14 @@ class TestBitgetSubscriptionMethods:
     @pytest.mark.asyncio
     async def test_subscribe_funding_futures(self, ws_feed):
         """Test funding subscription for futures symbols"""
-        with patch.object(ws_feed, '_subscribe_mix_channel') as mock_mix:
+        with patch.object(ws_feed, "_subscribe_mix_channel") as mock_mix:
             await ws_feed.subscribe_funding("BTCUSDT")
             mock_mix.assert_called_once_with("fundingRate.BTCUSDT")
 
 
 def test_factory_function():
     """Test create_bitget_ws_feed factory function"""
-    config = {'sandbox': True, 'api_key': 'test'}
+    config = {"sandbox": True, "api_key": "test"}
     feed = create_bitget_ws_feed(config)
 
     assert isinstance(feed, BitgetWebSocketFeed)

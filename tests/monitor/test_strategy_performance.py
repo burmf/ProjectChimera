@@ -11,7 +11,11 @@ from decimal import Decimal
 import pytest
 
 from project_chimera.domains.market import (
-    MarketFrame, Signal, SignalStrength, SignalType, Ticker
+    MarketFrame,
+    Signal,
+    SignalStrength,
+    SignalType,
+    Ticker,
 )
 from project_chimera.monitor.strategy_performance import (
     StrategyPerformanceTracker,
@@ -49,7 +53,7 @@ def sample_signal():
         price=Decimal("50000.0"),
         timestamp=datetime.now(),
         strategy_name="test_strategy",
-        confidence=0.75
+        confidence=0.75,
     )
 
 
@@ -65,7 +69,7 @@ def sample_market_frame():
             volume_24h=Decimal("1000.0"),
             change_24h=Decimal("0.05"),
             timestamp=datetime.now(),
-        )
+        ),
     )
 
 
@@ -83,7 +87,7 @@ class TestTradeRecord:
             entry_price=50000.0,
             size_usd=1000.0,
             size_native=0.02,
-            confidence=0.75
+            confidence=0.75,
         )
 
         assert trade.strategy_id == "test_strategy"
@@ -106,7 +110,7 @@ class TestTradeRecord:
             size_native=0.02,
             confidence=0.75,
             exit_price=52000.0,
-            exit_time=datetime.now() + timedelta(hours=1)
+            exit_time=datetime.now() + timedelta(hours=1),
         )
 
         trade.calculate_pnl()
@@ -129,7 +133,7 @@ class TestTradeRecord:
             size_native=0.02,
             confidence=0.75,
             exit_price=48000.0,
-            exit_time=datetime.now() + timedelta(hours=2)
+            exit_time=datetime.now() + timedelta(hours=2),
         )
 
         trade.calculate_pnl()
@@ -153,7 +157,7 @@ class TestTradeRecord:
             confidence=0.75,
             exit_price=52000.0,
             exit_time=datetime.now() + timedelta(hours=1),
-            commission_usd=5.0
+            commission_usd=5.0,
         )
 
         trade.calculate_pnl()
@@ -174,14 +178,18 @@ class TestStrategyPerformanceTracker:
         assert len(performance_tracker.open_positions) == 0
 
     @pytest.mark.asyncio
-    async def test_record_signal_generated(self, performance_tracker, sample_signal, sample_market_frame):
+    async def test_record_signal_generated(
+        self, performance_tracker, sample_signal, sample_market_frame
+    ):
         """Test recording signal generation"""
-        signal_id = await performance_tracker.record_signal_generated(sample_signal, sample_market_frame)
+        signal_id = await performance_tracker.record_signal_generated(
+            sample_signal, sample_market_frame
+        )
 
         assert signal_id is not None
-        assert sample_signal.metadata['signal_id'] == signal_id
-        assert 'generation_time' in sample_signal.metadata
-        assert 'market_price' in sample_signal.metadata
+        assert sample_signal.metadata["signal_id"] == signal_id
+        assert "generation_time" in sample_signal.metadata
+        assert "market_price" in sample_signal.metadata
 
     @pytest.mark.asyncio
     async def test_record_trade_entry(self, performance_tracker, sample_signal):
@@ -193,7 +201,7 @@ class TestStrategyPerformanceTracker:
             size_usd=1000.0,
             size_native=0.02,
             slippage_bps=2.0,
-            commission_usd=1.0
+            commission_usd=1.0,
         )
 
         assert signal_id is not None
@@ -215,14 +223,12 @@ class TestStrategyPerformanceTracker:
             signal=sample_signal,
             entry_price=50000.0,
             size_usd=1000.0,
-            size_native=0.02
+            size_native=0.02,
         )
 
         # Then record exit
         trade = await performance_tracker.record_trade_exit(
-            signal_id=signal_id,
-            exit_price=52000.0,
-            commission_usd=1.0
+            signal_id=signal_id, exit_price=52000.0, commission_usd=1.0
         )
 
         assert trade is not None
@@ -243,7 +249,7 @@ class TestStrategyPerformanceTracker:
             signal=sample_signal,
             entry_price=50000.0,
             size_usd=1000.0,
-            size_native=0.02
+            size_native=0.02,
         )
 
         # Update unrealized P&L
@@ -265,14 +271,13 @@ class TestStrategyPerformanceTracker:
                 signal=sample_signal,
                 entry_price=50000.0,
                 size_usd=1000.0,
-                size_native=0.02
+                size_native=0.02,
             )
 
             # Exit with varying profits/losses
             exit_price = 50000.0 + (i - 2) * 500  # Some wins, some losses
             await performance_tracker.record_trade_exit(
-                signal_id=signal_id,
-                exit_price=exit_price
+                signal_id=signal_id, exit_price=exit_price
             )
 
         # Get calculated stats
@@ -294,7 +299,7 @@ class TestStrategyPerformanceTracker:
             total_trades=10,
             total_pnl_usd=100.0,
             total_volume_usd=5000.0,
-            win_rate=60.0
+            win_rate=60.0,
         )
 
         performance_tracker.strategy_stats["strategy2"] = StrategyStats(
@@ -302,17 +307,17 @@ class TestStrategyPerformanceTracker:
             total_trades=15,
             total_pnl_usd=200.0,
             total_volume_usd=7500.0,
-            win_rate=70.0
+            win_rate=70.0,
         )
 
         summary = performance_tracker.get_performance_summary()
 
-        assert summary['total_strategies'] == 2
-        assert summary['total_trades'] == 25
-        assert summary['total_pnl_usd'] == 300.0
-        assert summary['total_volume_usd'] == 12500.0
-        assert summary['average_win_rate'] == 65.0
-        assert summary['best_strategy'] == "strategy2"
+        assert summary["total_strategies"] == 2
+        assert summary["total_trades"] == 25
+        assert summary["total_pnl_usd"] == 300.0
+        assert summary["total_volume_usd"] == 12500.0
+        assert summary["average_win_rate"] == 65.0
+        assert summary["best_strategy"] == "strategy2"
 
     def test_get_open_positions(self, performance_tracker):
         """Test getting open positions"""
@@ -326,7 +331,7 @@ class TestStrategyPerformanceTracker:
             entry_price=50000.0,
             size_usd=1000.0,
             size_native=0.02,
-            confidence=0.75
+            confidence=0.75,
         )
 
         performance_tracker.open_positions["test_strategy"].append(trade)
@@ -357,7 +362,7 @@ class TestStrategyPerformanceTracker:
                 size_usd=1000.0,
                 size_native=0.02,
                 confidence=0.75,
-                status=TradeStatus.FILLED
+                status=TradeStatus.FILLED,
             )
             performance_tracker.trade_records[strategy_id].append(trade)
 
@@ -390,16 +395,16 @@ class TestStrategyStats:
             total_pnl_usd=100.0,
             win_rate=60.0,
             first_trade_time=datetime.now(),
-            last_trade_time=datetime.now()
+            last_trade_time=datetime.now(),
         )
 
         stats_dict = stats.to_dict()
 
-        assert stats_dict['strategy_id'] == "test_strategy"
-        assert stats_dict['total_trades'] == 10
-        assert stats_dict['total_pnl_usd'] == 100.0
-        assert 'first_trade_time' in stats_dict
-        assert 'last_trade_time' in stats_dict
+        assert stats_dict["strategy_id"] == "test_strategy"
+        assert stats_dict["total_trades"] == 10
+        assert stats_dict["total_pnl_usd"] == 100.0
+        assert "first_trade_time" in stats_dict
+        assert "last_trade_time" in stats_dict
 
 
 @pytest.mark.asyncio
@@ -415,7 +420,7 @@ async def test_concurrent_trade_operations(performance_tracker, sample_signal):
             signal=sample_signal,
             entry_price=50000.0 + i * 10,
             size_usd=1000.0,
-            size_native=0.02
+            size_native=0.02,
         )
         tasks.append(task)
 
@@ -429,8 +434,7 @@ async def test_concurrent_trade_operations(performance_tracker, sample_signal):
     exit_tasks = []
     for i, signal_id in enumerate(signal_ids):
         task = performance_tracker.record_trade_exit(
-            signal_id=signal_id,
-            exit_price=51000.0 + i * 10
+            signal_id=signal_id, exit_price=51000.0 + i * 10
         )
         exit_tasks.append(task)
 

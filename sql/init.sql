@@ -53,7 +53,7 @@ CREATE INDEX IF NOT EXISTS idx_news_tags_news_id ON trading.news_tags (news_id);
 
 -- Alpha signals table
 CREATE TABLE IF NOT EXISTS trading.alpha_signals (
-    signal_id SERIAL,
+    signal_id SERIAL UNIQUE,
     timestamp TIMESTAMP NOT NULL,
     trading_pair VARCHAR(20) NOT NULL,
     signal_type VARCHAR(50) NOT NULL,

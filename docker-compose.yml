@@ -15,9 +15,9 @@ services:
       - ENVIRONMENT=production
       - PYTHONPATH=/app/src
     volumes:
-      - ./data:/app/data
-      - ./logs:/app/logs
-      - ./config:/app/config
+      - ./data:/app/data:Z
+      - ./logs:/app/logs:Z
+      - ./config:/app/config:Z
     ports:
       - "8000:8000"
     depends_on:
@@ -57,8 +57,8 @@ services:
       - ENVIRONMENT=production
       - PYTHONPATH=/app/src
     volumes:
-      - ./data:/app/data
-      - ./logs:/app/logs
+      - ./data:/app/data:Z
+      - ./logs:/app/logs:Z
     depends_on:
       redis:
         condition: service_healthy
@@ -106,6 +106,7 @@ services:
       - postgres
     networks:
       - chimera-network
+    command: ["tail", "-f", "/dev/null"]
     profiles:
       - development
 

@@ -1,6 +1,13 @@
 """
 Base async data feed implementation
 Core functionality for unified market data access
+
+Design Reference: CLAUDE.md - Data Sources Section 7 (WS + REST feeds)
+Related Classes:
+- BitgetWebSocketFeed: Live market data (books/trade/ticker/funding/OI)
+- BitgetREST: Historical candles, funding history
+- MarketFrame: Unified data structure for strategies
+- tenacity: Retry logic for connection failures
 """
 
 import asyncio
@@ -168,8 +175,6 @@ class AsyncDataFeed:
 
         for task in self._stream_tasks:
             task.cancel()
-
-        from contextlib import suppress
 
         from contextlib import suppress
 

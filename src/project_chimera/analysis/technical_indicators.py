@@ -631,17 +631,17 @@ def demo_technical_analysis():
     # Get market regime
     regime = analyzer.get_market_regime(df_with_indicators)
 
-    print("🔬 Technical Analysis Demo Results:")
-    print(f"📊 Calculated indicators for {len(df)} periods")
-    print(f"📈 Generated {len(signals)} signals")
-    print(
+    logger.info("🔬 Technical Analysis Demo Results:")
+    logger.info(f"📊 Calculated indicators for {len(df)} periods")
+    logger.info(f"📈 Generated {len(signals)} signals")
+    logger.info(
         f"🎯 Market regime: {regime['regime']} (confidence: {regime['confidence']:.2f})"
     )
 
     if signals:
-        print("\n🚨 Latest Signals:")
+        logger.info("\n🚨 Latest Signals:")
         for signal in signals[-3:]:  # Show last 3 signals
-            print(
+            logger.info(
                 f"  {signal.indicator_name}: {signal.signal_type.upper()} "
                 f"(strength: {signal.strength:.2f}, value: {signal.value:.2f})"
             )

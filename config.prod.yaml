@@ -36,7 +36,7 @@ trading:
   
   # Timing - faster updates in production
   position_timeout_minutes: 2
-  update_interval_seconds: 0.5
+  update_interval_seconds: 1
 
 # Risk management configuration - stricter for production
 risk:

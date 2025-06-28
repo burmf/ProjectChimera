@@ -102,7 +102,7 @@ class MiniMomentumStrategy(TechnicalStrategy):
 
         return current_momentum - previous_momentum
 
-    def generate_signal(self, market_data: MarketFrame) -> Signal | None:
+    async def generate_signal(self, market_data: MarketFrame) -> Signal | None:
         """Generate mini-momentum signal"""
         if not market_data.ohlcv_1m or len(market_data.ohlcv_1m) < self.min_lookback:
             return None

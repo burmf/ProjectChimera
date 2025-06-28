@@ -2,6 +2,13 @@
 Prometheus Metrics Exporter - Phase G Implementation
 Exports trading system metrics on port 9100
 Metrics: pnl_total, slippage_ms, dd_pct, ws_latency
+
+Design Reference: CLAUDE.md - Observability Section 6 (JSON Log + Prometheus)
+Related Classes:
+- TradingMetrics: Core metrics collection (PnL, drawdown, latency)
+- HTTPServer: HTTP endpoint for Prometheus scraping
+- PerformanceLogger: JSON log integration
+- Grafana dashboard: Visualization layer (not in code)
 """
 
 import logging

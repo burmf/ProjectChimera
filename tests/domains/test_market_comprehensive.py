@@ -56,7 +56,7 @@ class TestTicker:
             price=Decimal("50000.50"),
             volume_24h=Decimal("1000.25"),
             change_24h=Decimal("500.75"),
-            timestamp=datetime.now(timezone.utc)
+            timestamp=datetime.now(timezone.utc),
         )
 
     def test_ticker_creation(self, sample_ticker):
@@ -79,7 +79,7 @@ class TestTicker:
             price=Decimal("50000.123456789"),
             volume_24h=Decimal("1000.987654321"),
             change_24h=Decimal("-500.111"),
-            timestamp=datetime.now(timezone.utc)
+            timestamp=datetime.now(timezone.utc),
         )
 
         assert ticker.price == Decimal("50000.123456789")
@@ -93,7 +93,7 @@ class TestTicker:
             price=Decimal("0"),
             volume_24h=Decimal("0"),
             change_24h=Decimal("0"),
-            timestamp=datetime.now(timezone.utc)
+            timestamp=datetime.now(timezone.utc),
         )
 
         assert ticker.price == Decimal("0")
@@ -112,14 +112,14 @@ class TestOrderBook:
             bids=[
                 (Decimal("49900"), Decimal("1.5")),
                 (Decimal("49800"), Decimal("2.0")),
-                (Decimal("49700"), Decimal("0.5"))
+                (Decimal("49700"), Decimal("0.5")),
             ],
             asks=[
                 (Decimal("50100"), Decimal("1.0")),
                 (Decimal("50200"), Decimal("1.5")),
-                (Decimal("50300"), Decimal("2.0"))
+                (Decimal("50300"), Decimal("2.0")),
             ],
-            timestamp=datetime.now(timezone.utc)
+            timestamp=datetime.now(timezone.utc),
         )
 
     def test_orderbook_creation(self, sample_orderbook):
@@ -128,7 +128,7 @@ class TestOrderBook:
         assert len(sample_orderbook.bids) == 3
         assert len(sample_orderbook.asks) == 3
         assert sample_orderbook.bids[0][0] == Decimal("49900")  # Price
-        assert sample_orderbook.bids[0][1] == Decimal("1.5")    # Quantity
+        assert sample_orderbook.bids[0][1] == Decimal("1.5")  # Quantity
 
     def test_best_bid_ask(self, sample_orderbook):
         """Test best bid and ask properties"""
@@ -154,10 +154,7 @@ class TestOrderBook:
     def test_empty_orderbook(self):
         """Test orderbook with empty bids/asks"""
         empty_book = OrderBook(
-            symbol="BTCUSDT",
-            bids=[],
-            asks=[],
-            timestamp=datetime.now(timezone.utc)
+            symbol="BTCUSDT", bids=[], asks=[], timestamp=datetime.now(timezone.utc)
         )
 
         assert empty_book.best_bid is None
@@ -171,7 +168,7 @@ class TestOrderBook:
             symbol="BTCUSDT",
             bids=[(Decimal("49900"), Decimal("1.0"))],
             asks=[],
-            timestamp=datetime.now(timezone.utc)
+            timestamp=datetime.now(timezone.utc),
         )
 
         assert bids_only.best_bid == Decimal("49900")
@@ -185,7 +182,7 @@ class TestOrderBook:
             symbol="BTCUSDT",
             bids=[(Decimal("49900"), Decimal("0"))],
             asks=[(Decimal("50100"), Decimal("0"))],
-            timestamp=datetime.now(timezone.utc)
+            timestamp=datetime.now(timezone.utc),
         )
 
         assert zero_vol_book.imbalance == 0.0  # 0 / 0 should be handled
@@ -210,7 +207,7 @@ class TestOHLCV:
             close=Decimal("50000"),
             volume=Decimal("1000"),
             timestamp=datetime.now(timezone.utc),
-            timeframe="1m"
+            timeframe="1m",
         )
 
     def test_ohlcv_creation(self, sample_ohlcv):
@@ -232,7 +229,7 @@ class TestOHLCV:
             low=Decimal("48000"),
             close=Decimal("50000"),
             volume=Decimal("1000"),
-            timestamp=datetime.now(timezone.utc)
+            timestamp=datetime.now(timezone.utc),
         )
 
         assert ohlcv.timeframe == "1m"  # Default value
@@ -250,7 +247,7 @@ class TestOHLCV:
                 close=Decimal("50000"),
                 volume=Decimal("1000"),
                 timestamp=datetime.now(timezone.utc),
-                timeframe=tf
+                timeframe=tf,
             )
             assert ohlcv.timeframe == tf
 
@@ -264,7 +261,7 @@ class TestOHLCV:
             low=Decimal("50000"),
             close=Decimal("50000"),
             volume=Decimal("0"),
-            timestamp=datetime.now(timezone.utc)
+            timestamp=datetime.now(timezone.utc),
         )
 
         assert flat_ohlcv.open == flat_ohlcv.high == flat_ohlcv.low == flat_ohlcv.close
@@ -281,7 +278,7 @@ class TestFundingRate:
             symbol="BTCUSDT",
             rate=Decimal("0.0001"),
             next_funding_time=datetime.now(timezone.utc),
-            timestamp=datetime.now(timezone.utc)
+            timestamp=datetime.now(timezone.utc),
         )
 
     def test_funding_rate_creation(self, sample_funding_rate):
@@ -297,7 +294,7 @@ class TestFundingRate:
             symbol="BTCUSDT",
             rate=Decimal("-0.0001"),
             next_funding_time=datetime.now(timezone.utc),
-            timestamp=datetime.now(timezone.utc)
+            timestamp=datetime.now(timezone.utc),
         )
 
         assert negative_funding.rate == Decimal("-0.0001")
@@ -308,7 +305,7 @@ class TestFundingRate:
             symbol="BTCUSDT",
             rate=Decimal("0"),
             next_funding_time=datetime.now(timezone.utc),
-            timestamp=datetime.now(timezone.utc)
+            timestamp=datetime.now(timezone.utc),
         )
 
         assert zero_funding.rate == Decimal("0")
@@ -324,7 +321,7 @@ class TestMarketFrame:
             price=Decimal("50000"),
             volume_24h=Decimal("1000"),
             change_24h=Decimal("500"),
-            timestamp=datetime.now(timezone.utc)
+            timestamp=datetime.now(timezone.utc),
         )
 
     @pytest.fixture
@@ -333,7 +330,7 @@ class TestMarketFrame:
             symbol="BTCUSDT",
             bids=[(Decimal("49900"), Decimal("1.0"))],
             asks=[(Decimal("50100"), Decimal("1.0"))],
-            timestamp=datetime.now(timezone.utc)
+            timestamp=datetime.now(timezone.utc),
         )
 
     @pytest.fixture
@@ -347,8 +344,9 @@ class TestMarketFrame:
                 close=Decimal("50000"),
                 volume=Decimal("1000"),
                 timestamp=datetime.now(timezone.utc) - pd.Timedelta(minutes=i),
-                timeframe="1m"
-            ) for i in range(5)
+                timeframe="1m",
+            )
+            for i in range(5)
         ]
 
     @pytest.fixture
@@ -357,15 +355,13 @@ class TestMarketFrame:
             symbol="BTCUSDT",
             rate=Decimal("0.0001"),
             next_funding_time=datetime.now(timezone.utc),
-            timestamp=datetime.now(timezone.utc)
+            timestamp=datetime.now(timezone.utc),
         )
 
     def test_market_frame_basic(self, sample_ticker):
         """Test basic MarketFrame creation"""
         frame = MarketFrame(
-            symbol="BTCUSDT",
-            timestamp=datetime.now(timezone.utc),
-            ticker=sample_ticker
+            symbol="BTCUSDT", timestamp=datetime.now(timezone.utc), ticker=sample_ticker
         )
 
         assert frame.symbol == "BTCUSDT"
@@ -373,7 +369,9 @@ class TestMarketFrame:
         assert frame.orderbook is None
         assert frame.ohlcv_1m is None
 
-    def test_market_frame_full(self, sample_ticker, sample_orderbook, sample_ohlcv_list, sample_funding_rate):
+    def test_market_frame_full(
+        self, sample_ticker, sample_orderbook, sample_ohlcv_list, sample_funding_rate
+    ):
         """Test MarketFrame with all data"""
         frame = MarketFrame(
             symbol="BTCUSDT",
@@ -384,7 +382,7 @@ class TestMarketFrame:
             ohlcv_5m=sample_ohlcv_list,
             ohlcv_1h=sample_ohlcv_list,
             funding_rate=sample_funding_rate,
-            indicators={"rsi": 65.0, "macd": 0.5}
+            indicators={"rsi": 65.0, "macd": 0.5},
         )
 
         assert frame.ticker == sample_ticker
@@ -396,9 +394,7 @@ class TestMarketFrame:
     def test_current_price_from_ticker(self, sample_ticker):
         """Test current_price property from ticker"""
         frame = MarketFrame(
-            symbol="BTCUSDT",
-            timestamp=datetime.now(timezone.utc),
-            ticker=sample_ticker
+            symbol="BTCUSDT", timestamp=datetime.now(timezone.utc), ticker=sample_ticker
         )
 
         assert frame.current_price == sample_ticker.price
@@ -408,7 +404,7 @@ class TestMarketFrame:
         frame = MarketFrame(
             symbol="BTCUSDT",
             timestamp=datetime.now(timezone.utc),
-            ohlcv_1m=sample_ohlcv_list
+            ohlcv_1m=sample_ohlcv_list,
         )
 
         # Should use the last (most recent) OHLCV close price
@@ -419,7 +415,7 @@ class TestMarketFrame:
         frame = MarketFrame(
             symbol="BTCUSDT",
             timestamp=datetime.now(timezone.utc),
-            orderbook=sample_orderbook
+            orderbook=sample_orderbook,
         )
 
         # Should calculate mid price from best bid/ask
@@ -428,10 +424,7 @@ class TestMarketFrame:
 
     def test_current_price_none(self):
         """Test current_price property when no data available"""
-        frame = MarketFrame(
-            symbol="BTCUSDT",
-            timestamp=datetime.now(timezone.utc)
-        )
+        frame = MarketFrame(symbol="BTCUSDT", timestamp=datetime.now(timezone.utc))
 
         assert frame.current_price is None
 
@@ -440,22 +433,22 @@ class TestMarketFrame:
         frame = MarketFrame(
             symbol="BTCUSDT",
             timestamp=datetime.now(timezone.utc),
-            ohlcv_1m=sample_ohlcv_list
+            ohlcv_1m=sample_ohlcv_list,
         )
 
         df = frame.get_ohlcv_df("1m")
 
         assert isinstance(df, pd.DataFrame)
         assert len(df) == len(sample_ohlcv_list)
-        assert list(df.columns) == ['open', 'high', 'low', 'close', 'volume']
-        assert df.index.name == 'timestamp'
+        assert list(df.columns) == ["open", "high", "low", "close", "volume"]
+        assert df.index.name == "timestamp"
 
     def test_get_ohlcv_df_5m(self, sample_ohlcv_list):
         """Test get_ohlcv_df method for 5m timeframe"""
         frame = MarketFrame(
             symbol="BTCUSDT",
             timestamp=datetime.now(timezone.utc),
-            ohlcv_5m=sample_ohlcv_list
+            ohlcv_5m=sample_ohlcv_list,
         )
 
         df = frame.get_ohlcv_df("5m")
@@ -468,7 +461,7 @@ class TestMarketFrame:
         frame = MarketFrame(
             symbol="BTCUSDT",
             timestamp=datetime.now(timezone.utc),
-            ohlcv_1h=sample_ohlcv_list
+            ohlcv_1h=sample_ohlcv_list,
         )
 
         df = frame.get_ohlcv_df("1h")
@@ -478,10 +471,7 @@ class TestMarketFrame:
 
     def test_get_ohlcv_df_no_data(self):
         """Test get_ohlcv_df method when no data available"""
-        frame = MarketFrame(
-            symbol="BTCUSDT",
-            timestamp=datetime.now(timezone.utc)
-        )
+        frame = MarketFrame(symbol="BTCUSDT", timestamp=datetime.now(timezone.utc))
 
         df = frame.get_ohlcv_df("1m")
         assert df is None
@@ -489,9 +479,7 @@ class TestMarketFrame:
     def test_get_ohlcv_df_empty_list(self):
         """Test get_ohlcv_df method with empty OHLCV list"""
         frame = MarketFrame(
-            symbol="BTCUSDT",
-            timestamp=datetime.now(timezone.utc),
-            ohlcv_1m=[]
+            symbol="BTCUSDT", timestamp=datetime.now(timezone.utc), ohlcv_1m=[]
         )
 
         df = frame.get_ohlcv_df("1m")
@@ -502,7 +490,7 @@ class TestMarketFrame:
         frame = MarketFrame(
             symbol="BTCUSDT",
             timestamp=datetime.now(timezone.utc),
-            ohlcv_1m=sample_ohlcv_list
+            ohlcv_1m=sample_ohlcv_list,
         )
 
         df = frame.get_ohlcv_df("invalid")
@@ -527,7 +515,7 @@ class TestSignal:
             stop_loss=Decimal("48000"),
             take_profit=Decimal("54000"),
             indicators_used={"rsi": 30, "macd": 0.5},
-            reasoning="Strong bullish signal detected"
+            reasoning="Strong bullish signal detected",
         )
 
     def test_signal_creation(self, sample_signal):
@@ -553,7 +541,7 @@ class TestSignal:
             price=Decimal("50000"),
             timestamp=datetime.now(timezone.utc),
             strategy_name="minimal_strategy",
-            confidence=0.4
+            confidence=0.4,
         )
 
         assert signal.target_price is None
@@ -575,7 +563,7 @@ class TestSignal:
             price=Decimal("50000"),
             timestamp=datetime.now(timezone.utc),
             strategy_name="test_strategy",
-            confidence=-0.1  # Invalid: < 0
+            confidence=-0.1,  # Invalid: < 0
         )
 
         assert signal.is_valid() is False
@@ -589,7 +577,7 @@ class TestSignal:
             price=Decimal("50000"),
             timestamp=datetime.now(timezone.utc),
             strategy_name="test_strategy",
-            confidence=1.5  # Invalid: > 1
+            confidence=1.5,  # Invalid: > 1
         )
 
         assert signal.is_valid() is False
@@ -603,7 +591,7 @@ class TestSignal:
             price=Decimal("0"),  # Invalid: <= 0
             timestamp=datetime.now(timezone.utc),
             strategy_name="test_strategy",
-            confidence=0.8
+            confidence=0.8,
         )
 
         assert signal.is_valid() is False
@@ -617,7 +605,7 @@ class TestSignal:
             price=Decimal("50000"),
             timestamp=datetime.now(timezone.utc),
             strategy_name="test_strategy",
-            confidence=0.8
+            confidence=0.8,
         )
 
         # Valid signal type should pass
@@ -640,7 +628,7 @@ class TestSignal:
             price=Decimal("50000"),
             timestamp=datetime.now(timezone.utc),
             strategy_name="test",
-            confidence=0.9
+            confidence=0.9,
         )
 
         sell_weak = Signal(
@@ -650,7 +638,7 @@ class TestSignal:
             price=Decimal("3000"),
             timestamp=datetime.now(timezone.utc),
             strategy_name="test",
-            confidence=0.3
+            confidence=0.3,
         )
 
         hold_medium = Signal(
@@ -660,7 +648,7 @@ class TestSignal:
             price=Decimal("1"),
             timestamp=datetime.now(timezone.utc),
             strategy_name="test",
-            confidence=0.6
+            confidence=0.6,
         )
 
         assert buy_strong.signal_type == SignalType.BUY

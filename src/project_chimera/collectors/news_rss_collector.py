@@ -194,8 +194,6 @@ class NewsRSSCollector:
 
         from contextlib import suppress
 
-        from contextlib import suppress
-
         if self._task:
             self._task.cancel()
             with suppress(asyncio.CancelledError):

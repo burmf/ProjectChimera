@@ -283,8 +283,8 @@ class PerformanceMixin:
                 mid_price = (market_frame.ask + market_frame.bid) / 2
                 spread_bps = (spread / mid_price) * 10000  # bps
                 return spread_bps
-        except:
-            pass
+        except Exception as e:
+            logger.warning("spread_calculation_error", error=str(e))
         return None
 
     def _get_current_parameters(self) -> dict[str, Any]:

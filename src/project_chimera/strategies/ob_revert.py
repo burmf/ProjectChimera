@@ -23,31 +23,34 @@ class OrderBookMeanReversionStrategy(TechnicalStrategy):
     """
 
     def __init__(self, config: StrategyConfig):
-        super().__init__(config)
-
-        # Strategy parameters with defaults
-        self.imbalance_threshold = self.params.get(
+        # Strategy parameters with defaults - set before calling super()
+        self.imbalance_threshold = config.params.get(
             "imbalance_threshold", 0.3
         )  # 30% imbalance
-        self.extreme_imbalance = self.params.get(
+        self.extreme_imbalance = config.params.get(
             "extreme_imbalance", 0.5
         )  # 50% for strong signals
-        self.price_deviation_threshold = self.params.get(
+        self.price_deviation_threshold = config.params.get(
             "price_deviation_threshold", 0.005
         )  # 0.5%
-        self.volume_confirmation = self.params.get("volume_confirmation", True)
-        self.volume_threshold = self.params.get(
+        self.volume_confirmation = config.params.get("volume_confirmation", True)
+        self.volume_threshold = config.params.get(
             "volume_threshold", 1.5
         )  # 50% above average
-        self.spread_max_pct = self.params.get(
+        self.spread_max_pct = config.params.get(
             "spread_max_pct", 0.001
         )  # Max 0.1% spread
-        self.orderbook_levels = self.params.get("orderbook_levels", 10)
-        self.sma_period = self.params.get("sma_period", 20)
-        self.atr_period = self.params.get("atr_period", 14)
-        self.min_lookback = self.params.get("min_lookback", 30)
+        self.orderbook_levels = config.params.get("orderbook_levels", 10)
+        self.sma_period = config.params.get("sma_period", 20)
+        self.atr_period = config.params.get("atr_period", 14)
+        self.min_lookback = config.params.get("min_lookback", 30)
 
-        self.validate_config()
+        super().__init__(config)
+
+    def validate_config(self) -> None:
+        """Validate strategy configuration"""
+        if not (0.1 <= self.imbalance_threshold <= 0.8):
+            raise ValueError("imbalance_threshold must be between 0.1 and 0.8")
 
         if not (0.2 <= self.extreme_imbalance <= 0.9):
             raise ValueError("extreme_imbalance must be between 0.2 and 0.9")
@@ -118,7 +121,7 @@ class OrderBookMeanReversionStrategy(TechnicalStrategy):
 
         return spread_pct <= self.spread_max_pct
 
-    def generate_signal(self, market_data: MarketFrame) -> Signal | None:
+    async def generate_signal(self, market_data: MarketFrame) -> Signal | None:
         """Generate order book mean-reversion signal"""
         if not market_data.orderbook or not market_data.ohlcv_1m:
             return None

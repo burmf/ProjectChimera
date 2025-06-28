@@ -21,9 +21,9 @@ class FundingContraStrategy(Strategy):
     """
 
     def __init__(self, config: StrategyConfig):
-        super().__init__(config)
-        # Load strategy-specific settings
+        # Load strategy-specific settings before calling super()
         self.strategy_settings = get_strategy_config("funding_contrarian")
+        super().__init__(config)
 
     def validate_config(self) -> None:
         """Validate strategy configuration"""
@@ -83,7 +83,7 @@ class FundingContraStrategy(Strategy):
             "lookback_periods": max(self.params["lookback_periods"], 48),
         }
 
-    def generate_signal(self, market_data: MarketFrame) -> Signal | None:
+    async def generate_signal(self, market_data: MarketFrame) -> Signal | None:
         """Generate funding contrarian signal"""
         # Check if we have required funding and OI data
         if not hasattr(market_data, "funding_rate") or not hasattr(

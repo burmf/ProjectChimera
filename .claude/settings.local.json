@@ -81,7 +81,9 @@
       "Bash(pg_isready:*)",
       "WebFetch(domain:www.bitget.com)",
       "WebFetch(domain:bitgetlimited.github.io)",
-      "WebFetch(domain:python-bitget.readthedocs.io)"
+      "WebFetch(domain:python-bitget.readthedocs.io)",
+      "Bash(ccusage)",
+      "Bash(gemini:*)"
     ],
     "deny": []
   }

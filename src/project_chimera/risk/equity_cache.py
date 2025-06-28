@@ -563,7 +563,10 @@ class EquityCache:
 
         except Exception as e:
             # Log error but don't raise
-            print(f"Failed to load equity cache: {e}")
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to load equity cache: {e}")
             return False
 
     def clear_cache(self) -> None:

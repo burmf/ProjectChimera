@@ -23,11 +23,14 @@ class TestMockAdapter:
 
     @pytest.fixture
     async def mock_adapter(self):
-        adapter = MockAdapter("mock", {
-            'base_prices': {'BTCUSDT': 45000.0, 'ETHUSDT': 3000.0},
-            'volatility': 0.01,
-            'trend': 0.001
-        })
+        adapter = MockAdapter(
+            "mock",
+            {
+                "base_prices": {"BTCUSDT": 45000.0, "ETHUSDT": 3000.0},
+                "volatility": 0.01,
+                "trend": 0.001,
+            },
+        )
         await adapter.connect()
         yield adapter
         await adapter.disconnect()
@@ -127,12 +130,12 @@ class TestDataFeedFactory:
             exchange="mock",
             symbols=["BTCUSDT", "ETHUSDT"],
             config={
-                'feed': {
-                    'enable_orderbook': True,
-                    'enable_funding': False,
-                    'cache_ttl': 30
+                "feed": {
+                    "enable_orderbook": True,
+                    "enable_funding": False,
+                    "cache_ttl": 30,
                 }
-            }
+            },
         )
 
         assert isinstance(feed, AsyncDataFeed)
@@ -156,11 +159,11 @@ class TestAsyncDataFeed:
             adapter=mock_adapter,
             symbols=["BTCUSDT", "ETHUSDT"],
             config={
-                'health_check_interval': 1,  # Fast for testing
-                'cache_ttl': 5,
-                'enable_orderbook': True,
-                'enable_funding': False
-            }
+                "health_check_interval": 1,  # Fast for testing
+                "cache_ttl": 5,
+                "enable_orderbook": True,
+                "enable_funding": False,
+            },
         )
         yield feed
         if feed._running:
@@ -211,15 +214,15 @@ class TestAsyncDataFeed:
 
         metrics = feed.get_metrics()
 
-        assert 'status' in metrics
-        assert 'symbols_subscribed' in metrics
-        assert 'messages_received' in metrics
-        assert 'errors' in metrics
-        assert 'last_update' in metrics
+        assert "status" in metrics
+        assert "symbols_subscribed" in metrics
+        assert "messages_received" in metrics
+        assert "errors" in metrics
+        assert "last_update" in metrics
 
-        assert metrics['status'] == FeedStatus.RUNNING.value
-        assert metrics['symbols_subscribed'] == 2
-        assert metrics['messages_received'] >= 0
+        assert metrics["status"] == FeedStatus.RUNNING.value
+        assert metrics["symbols_subscribed"] == 2
+        assert metrics["messages_received"] >= 0
 
     @pytest.mark.asyncio
     async def test_symbol_management(self, feed):
@@ -260,13 +263,13 @@ class TestLatencyMetrics:
             metrics = feed.get_metrics()
 
             # Check if latency metrics are present when available
-            if metrics.get('latency_median_ms') is not None:
-                assert metrics['latency_median_ms'] >= 0
-                assert metrics['latency_median_ms'] < 1000  # Should be fast for mock
+            if metrics.get("latency_median_ms") is not None:
+                assert metrics["latency_median_ms"] >= 0
+                assert metrics["latency_median_ms"] < 1000  # Should be fast for mock
 
-            if metrics.get('latency_p95_ms') is not None:
-                assert metrics['latency_p95_ms'] >= 0
-                assert metrics['latency_p95_ms'] < 1000
+            if metrics.get("latency_p95_ms") is not None:
+                assert metrics["latency_p95_ms"] >= 0
+                assert metrics["latency_p95_ms"] < 1000
 
         finally:
             await feed.stop()
@@ -295,7 +298,9 @@ class TestLatencyMetrics:
             if latencies:
                 median_latency = sorted(latencies)[len(latencies) // 2]
                 # Mock adapter should have very low latency
-                assert median_latency < 250, f"Median latency {median_latency}ms exceeds requirement"
+                assert (
+                    median_latency < 250
+                ), f"Median latency {median_latency}ms exceeds requirement"
 
         finally:
             await feed.stop()
@@ -337,7 +342,9 @@ class TestIntegration:
                 price_changes = []
                 if len(snapshot.ohlcv_1m) >= 2:
                     recent = snapshot.ohlcv_1m[-2:]
-                    change = (float(recent[-1].close) - float(recent[0].close)) / float(recent[0].close)
+                    change = (float(recent[-1].close) - float(recent[0].close)) / float(
+                        recent[0].close
+                    )
                     price_changes.append(change)
 
                     # Should be able to calculate basic momentum
@@ -352,10 +359,9 @@ class TestIntegration:
         """Test error handling and recovery mechanisms"""
         # Create adapter that can simulate failures
         adapter = MockAdapter("mock", {})
-        feed = AsyncDataFeed(adapter, ["BTCUSDT"], {
-            'health_check_interval': 1,
-            'reconnect_attempts': 3
-        })
+        feed = AsyncDataFeed(
+            adapter, ["BTCUSDT"], {"health_check_interval": 1, "reconnect_attempts": 3}
+        )
 
         try:
             await feed.start()

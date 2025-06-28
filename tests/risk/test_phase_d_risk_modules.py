@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 import numpy as np
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
 from project_chimera.domains.market import OHLCV
 from project_chimera.risk.atr_target import (
@@ -41,7 +41,7 @@ class TestDynamicKelly(unittest.TestCase):
             base_kelly_fraction=0.5,
             ewma_alpha=0.1,
             min_sample_size=10,
-            lookback_window=50
+            lookback_window=50,
         )
         self.calculator = DynamicKellyCalculator(self.config)
 
@@ -79,8 +79,28 @@ class TestDynamicKelly(unittest.TestCase):
     def test_kelly_calculation_with_sufficient_data(self):
         """Test Kelly calculation with sufficient data"""
         # Create profitable strategy data
-        profitable_returns = [0.05, 0.03, -0.02, 0.04, -0.01, 0.02, 0.01, -0.03, 0.06, -0.01,
-                             0.03, 0.02, -0.01, 0.04, 0.01, 0.02, -0.02, 0.05, -0.01, 0.03]
+        profitable_returns = [
+            0.05,
+            0.03,
+            -0.02,
+            0.04,
+            -0.01,
+            0.02,
+            0.01,
+            -0.03,
+            0.06,
+            -0.01,
+            0.03,
+            0.02,
+            -0.01,
+            0.04,
+            0.01,
+            0.02,
+            -0.02,
+            0.05,
+            -0.01,
+            0.03,
+        ]
 
         for ret in profitable_returns:
             self.calculator.add_trade_result(ret)
@@ -108,8 +128,28 @@ class TestDynamicKelly(unittest.TestCase):
     def test_negative_edge_strategy(self):
         """Test Kelly calculation with negative edge strategy"""
         # Create losing strategy data
-        losing_returns = [-0.02, -0.01, 0.005, -0.03, -0.01, 0.002, -0.02, -0.015, 0.01, -0.025,
-                         -0.01, -0.02, 0.005, -0.03, -0.01, 0.002, -0.02, -0.015, 0.01, -0.025]
+        losing_returns = [
+            -0.02,
+            -0.01,
+            0.005,
+            -0.03,
+            -0.01,
+            0.002,
+            -0.02,
+            -0.015,
+            0.01,
+            -0.025,
+            -0.01,
+            -0.02,
+            0.005,
+            -0.03,
+            -0.01,
+            0.002,
+            -0.02,
+            -0.015,
+            0.01,
+            -0.025,
+        ]
 
         for ret in losing_returns:
             self.calculator.add_trade_result(ret)
@@ -121,7 +161,18 @@ class TestDynamicKelly(unittest.TestCase):
     def test_outlier_filtering(self):
         """Test outlier filtering functionality"""
         # Create data with outliers
-        normal_returns = [0.01, 0.02, -0.01, 0.015, -0.005, 0.02, 0.01, -0.015, 0.025, -0.01]
+        normal_returns = [
+            0.01,
+            0.02,
+            -0.01,
+            0.015,
+            -0.005,
+            0.02,
+            0.01,
+            -0.015,
+            0.025,
+            -0.01,
+        ]
         outlier_returns = [0.5, -0.6]  # Extreme outliers
 
         all_returns = normal_returns + outlier_returns
@@ -170,7 +221,18 @@ class TestDynamicKelly(unittest.TestCase):
 
         # Low confidence scenario: volatile, inconsistent returns
         self.calculator.reset()
-        volatile_returns = [0.1, -0.08, 0.12, -0.15, 0.05, -0.09, 0.08, -0.11, 0.03, -0.07]
+        volatile_returns = [
+            0.1,
+            -0.08,
+            0.12,
+            -0.15,
+            0.05,
+            -0.09,
+            0.08,
+            -0.11,
+            0.03,
+            -0.07,
+        ]
 
         for ret in volatile_returns:
             self.calculator.add_trade_result(ret)
@@ -197,8 +259,30 @@ class TestDynamicKelly(unittest.TestCase):
     def test_numpy_reference_kelly_formula(self):
         """Test against NumPy reference implementation"""
         # Create test data
-        returns = np.array([0.05, 0.03, -0.02, 0.04, -0.01, 0.02, 0.01, -0.03, 0.06, -0.01,
-                           0.03, 0.02, -0.01, 0.04, 0.01, 0.02, -0.02, 0.05, -0.01, 0.03])
+        returns = np.array(
+            [
+                0.05,
+                0.03,
+                -0.02,
+                0.04,
+                -0.01,
+                0.02,
+                0.01,
+                -0.03,
+                0.06,
+                -0.01,
+                0.03,
+                0.02,
+                -0.01,
+                0.04,
+                0.01,
+                0.02,
+                -0.02,
+                0.05,
+                -0.01,
+                0.03,
+            ]
+        )
 
         # NumPy reference implementation
         wins = returns[returns > 0]
@@ -241,11 +325,13 @@ class TestATRTarget(unittest.TestCase):
             target_daily_vol=0.01,
             atr_periods=14,
             min_position_size=0.01,
-            max_position_size=0.20
+            max_position_size=0.20,
         )
         self.controller = ATRTargetController(self.config)
 
-    def create_test_ohlcv_data(self, n_periods: int = 50, base_price: float = 100.0) -> list[OHLCV]:
+    def create_test_ohlcv_data(
+        self, n_periods: int = 50, base_price: float = 100.0
+    ) -> list[OHLCV]:
         """Create test OHLCV data"""
         data = []
         price = base_price
@@ -253,7 +339,7 @@ class TestATRTarget(unittest.TestCase):
         for i in range(n_periods):
             # Random walk with some volatility
             change = np.random.normal(0, 0.02)  # 2% daily volatility
-            price *= (1 + change)
+            price *= 1 + change
 
             # Create OHLCV with realistic intraday range
             high = price * (1 + abs(np.random.normal(0, 0.005)))
@@ -266,7 +352,7 @@ class TestATRTarget(unittest.TestCase):
                 high=high,
                 low=low,
                 close=price,
-                volume=1000.0
+                volume=1000.0,
             )
             data.append(ohlcv)
 
@@ -300,9 +386,9 @@ class TestATRTarget(unittest.TestCase):
                 symbol="BTCUSDT",
                 open=base_price + i * 0.1,
                 high=base_price + i * 0.1 + 2.0,  # Constant 2.0 range
-                low=base_price + i * 0.1 - 1.0,   # Constant 3.0 true range
+                low=base_price + i * 0.1 - 1.0,  # Constant 3.0 true range
                 close=base_price + i * 0.1 + 1.0,
-                volume=1000.0
+                volume=1000.0,
             )
             test_data.append(ohlcv)
 
@@ -368,14 +454,16 @@ class TestATRTarget(unittest.TestCase):
                 high=price * 1.03,  # High intraday range
                 low=price * 0.97,
                 close=price,
-                volume=1000.0
+                volume=1000.0,
             )
             high_vol_data.append(ohlcv)
 
         for ohlcv in high_vol_data:
             self.controller.add_price_data(ohlcv)
 
-        high_vol_result = self.controller.calculate_target_position_size(high_vol_data[-1].close)
+        high_vol_result = self.controller.calculate_target_position_size(
+            high_vol_data[-1].close
+        )
 
         # Reset and test low volatility
         self.controller.reset()
@@ -392,17 +480,21 @@ class TestATRTarget(unittest.TestCase):
                 high=price * 1.003,  # Low intraday range
                 low=price * 0.997,
                 close=price,
-                volume=1000.0
+                volume=1000.0,
             )
             low_vol_data.append(ohlcv)
 
         for ohlcv in low_vol_data:
             self.controller.add_price_data(ohlcv)
 
-        low_vol_result = self.controller.calculate_target_position_size(low_vol_data[-1].close)
+        low_vol_result = self.controller.calculate_target_position_size(
+            low_vol_data[-1].close
+        )
 
         # High vol should result in smaller position size
-        self.assertGreater(low_vol_result.position_size_pct, high_vol_result.position_size_pct)
+        self.assertGreater(
+            low_vol_result.position_size_pct, high_vol_result.position_size_pct
+        )
 
     def test_volatility_regime_adjustment(self):
         """Test volatility regime adjustment"""
@@ -417,13 +509,13 @@ class TestATRTarget(unittest.TestCase):
         # Add high volatility period
         for i in range(10):
             high_vol_ohlcv = OHLCV(
-                timestamp=datetime.now() + timedelta(hours=15+i),
+                timestamp=datetime.now() + timedelta(hours=15 + i),
                 symbol="BTCUSDT",
                 open=100.0,
                 high=105.0,  # High range
                 low=95.0,
                 close=100.0,
-                volume=1000.0
+                volume=1000.0,
             )
             self.controller.add_price_data(high_vol_ohlcv)
 
@@ -478,7 +570,7 @@ class TestDDGuard(unittest.TestCase):
             warning_threshold=0.10,
             critical_threshold=0.20,
             warning_multiplier=0.5,
-            critical_multiplier=0.0
+            critical_multiplier=0.0,
         )
         self.guard = DDGuardSystem(self.config, initial_equity=1.0)
 
@@ -587,7 +679,7 @@ class TestDDGuard(unittest.TestCase):
         self.assertTrue(state.is_in_cooldown())
 
         # Mock time passing
-        with patch('project_chimera.risk.dd_guard.datetime') as mock_dt:
+        with patch("project_chimera.risk.dd_guard.datetime") as mock_dt:
             # Set current time to after cooldown
             future_time = datetime.now() + timedelta(hours=5)
             mock_dt.now.return_value = future_time
@@ -604,6 +696,7 @@ class TestDDGuard(unittest.TestCase):
 
         # Simulate time passing for minimum recovery time
         import time
+
         time.sleep(0.1)  # Small delay to ensure time difference
 
         # Partial recovery
@@ -617,7 +710,14 @@ class TestDDGuard(unittest.TestCase):
 
     def test_consecutive_loss_tracking(self):
         """Test consecutive loss tracking"""
-        equity_curve = [1.0, 0.98, 0.96, 0.94, 0.92, 0.95]  # 4 consecutive losses, then recovery
+        equity_curve = [
+            1.0,
+            0.98,
+            0.96,
+            0.94,
+            0.92,
+            0.95,
+        ]  # 4 consecutive losses, then recovery
 
         max_consecutive = 0
         for equity in equity_curve:
@@ -664,9 +764,15 @@ class TestDDGuard(unittest.TestCase):
         stats = self.guard.get_statistics()
 
         required_keys = [
-            "current_equity", "peak_equity", "current_drawdown", "worst_drawdown",
-            "current_tier", "position_multiplier", "total_return", "volatility",
-            "tier_changes"
+            "current_equity",
+            "peak_equity",
+            "current_drawdown",
+            "worst_drawdown",
+            "current_tier",
+            "position_multiplier",
+            "total_return",
+            "volatility",
+            "tier_changes",
         ]
 
         for key in required_keys:
@@ -712,7 +818,7 @@ class TestPhaseIntegration(unittest.TestCase):
 
         for i, ret in enumerate(trade_returns):
             # Update price
-            base_price *= (1 + ret)
+            base_price *= 1 + ret
 
             ohlcv = OHLCV(
                 timestamp=datetime.now() + timedelta(hours=i),
@@ -721,13 +827,13 @@ class TestPhaseIntegration(unittest.TestCase):
                 high=base_price * 1.01,
                 low=base_price * 0.99,
                 close=base_price,
-                volume=1000.0
+                volume=1000.0,
             )
 
             self.atr_controller.add_price_data(ohlcv)
 
             # Update equity for DD guard
-            equity *= (1 + ret)
+            equity *= 1 + ret
             self.dd_guard.update_equity(equity)
 
         # Get recommendations from each module
@@ -754,7 +860,18 @@ class TestPhaseIntegration(unittest.TestCase):
     def test_stress_scenario(self):
         """Test modules under stress scenario"""
         # Create stressed market conditions
-        stress_returns = [0.05, -0.08, 0.03, -0.12, 0.02, -0.15, 0.01, -0.10, 0.04, -0.20]
+        stress_returns = [
+            0.05,
+            -0.08,
+            0.03,
+            -0.12,
+            0.02,
+            -0.15,
+            0.01,
+            -0.10,
+            0.04,
+            -0.20,
+        ]
 
         equity = 1.0
         for ret in stress_returns:
@@ -762,7 +879,7 @@ class TestPhaseIntegration(unittest.TestCase):
             self.kelly_calc.add_trade_result(ret)
 
             # Update equity and DD guard
-            equity *= (1 + ret)
+            equity *= 1 + ret
             dd_state = self.dd_guard.update_equity(equity)
 
             # In stress, DD guard should reduce position sizes
@@ -774,6 +891,6 @@ class TestPhaseIntegration(unittest.TestCase):
         self.assertLess(kelly_result.kelly_fraction, 0.5)  # Should be conservative
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Run tests with verbose output
     unittest.main(verbosity=2)

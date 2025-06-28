@@ -61,7 +61,7 @@ class BasisArbitrageStrategy(Strategy):
             "lookback_periods": 100,
         }
 
-    def generate_signal(self, market_data: MarketFrame) -> Signal | None:
+    async def generate_signal(self, market_data: MarketFrame) -> Signal | None:
         """Generate basis arbitrage signal"""
         # Check if we have required spot and perp data
         if not hasattr(market_data, "spot_price") or not hasattr(

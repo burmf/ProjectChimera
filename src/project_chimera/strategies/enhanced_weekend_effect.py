@@ -1,6 +1,13 @@
 """
 週末効果戦略（パフォーマンス測定機能付き）
 Enhanced Weekend Effect Strategy with Performance Monitoring
+
+Design Reference: CLAUDE.md - Strategy Modules Section 5 (WKND_EFF: Fri 23:00 UTC buy → Mon 01:00 sell)
+Related Classes:
+- StrategyBase: Abstract interface for generate() and on_fill()
+- PerformanceMixin: Trade metrics tracking and performance analysis
+- MarketFrame -> Signal: Input/output data structures
+- UnifiedRiskEngine: Position sizing integration
 """
 
 import asyncio

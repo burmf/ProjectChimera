@@ -9,8 +9,12 @@ from pathlib import Path
 from typing import Any, Literal
 
 import yaml
+from dotenv import load_dotenv
 from pydantic import AnyUrl, BaseModel, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Load .env file at module import
+load_dotenv()
 
 
 class StrategyConfig(BaseModel):
@@ -214,7 +218,7 @@ class RedisStreamsConfig(BaseModel):
 
     # Connection settings
     redis_url: str = Field(
-        default="redis://localhost:6379", description="Redis connection URL"
+        default="redis://redis:6379", description="Redis connection URL"
     )
     redis_db: int = Field(default=0, ge=0, le=15, description="Redis database number")
 
@@ -266,7 +270,10 @@ class LayerSystemConfig(BaseModel):
 
     # Simplified risk settings for orchestrator's decisions
     risk_multiplier: float = Field(
-        default=0.5, ge=0.1, le=1.0, description="Conservative risk multiplier for AI decisions"
+        default=0.5,
+        ge=0.1,
+        le=1.0,
+        description="Conservative risk multiplier for AI decisions",
     )
     max_risk_adjusted_size_pct: float = Field(
         default=0.02, gt=0, le=0.1, description="Max risk-adjusted size percentage cap"
@@ -594,15 +601,7 @@ class Settings(BaseSettings):
     # Sub-configurations
     trading: TradingConfig = Field(default_factory=TradingConfig)
     risk: RiskConfig = Field(default_factory=RiskConfig)
-    api: APIConfig = Field(
-        default_factory=lambda: APIConfig(
-            bitget_key=SecretStr(os.getenv("BITGET_API_KEY", "")),
-            bitget_secret=SecretStr(os.getenv("BITGET_SECRET_KEY", "")),
-            bitget_passphrase=SecretStr(os.getenv("BITGET_PASSPHRASE", "")),
-            bitget_sandbox=os.getenv("BITGET_SANDBOX", "true").lower() == "true",
-            openai_api_key=SecretStr(os.getenv("OPENAI_API_KEY", "")),
-        )
-    )
+    api: APIConfig = Field(default_factory=lambda: Settings._create_api_config())
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
     monitoring: MonitoringConfig = Field(default_factory=MonitoringConfig)
     strategies: StrategiesConfig = Field(default_factory=StrategiesConfig)
@@ -612,7 +611,24 @@ class Settings(BaseSettings):
 
     # ProjectChimera 4-Layer System Configuration
     layer_system: LayerSystemConfig = Field(
-        default_factory=lambda: LayerSystemConfig(
+        default_factory=lambda: Settings._create_layer_system_config()
+    )
+
+    @staticmethod
+    def _create_api_config() -> APIConfig:
+        """Create API configuration from environment variables"""
+        return APIConfig(
+            bitget_key=SecretStr(os.getenv("BITGET_API_KEY", "")),
+            bitget_secret=SecretStr(os.getenv("BITGET_SECRET_KEY", "")),
+            bitget_passphrase=SecretStr(os.getenv("BITGET_PASSPHRASE", "")),
+            bitget_sandbox=os.getenv("BITGET_SANDBOX", "true").lower() == "true",
+            openai_api_key=SecretStr(os.getenv("OPENAI_API_KEY", "")),
+        )
+
+    @staticmethod
+    def _create_layer_system_config() -> LayerSystemConfig:
+        """Create layer system configuration from environment variables"""
+        return LayerSystemConfig(
             ai=AIConfig(
                 openai_api_key=SecretStr(os.getenv("OPENAI_API_KEY", "")),
                 openai_model=os.getenv("OPENAI_MODEL", "o3-mini"),
@@ -621,7 +637,6 @@ class Settings(BaseSettings):
                 ),
             )
         )
-    )
 
     # Paths
     data_dir: Path = Field(default=Path("data"), description="Data directory")
@@ -632,8 +647,7 @@ class Settings(BaseSettings):
         env_nested_delimiter="__",
         case_sensitive=False,
         extra="ignore",
-        yaml_file="config.{env}.yaml",
-        yaml_file_encoding="utf-8",
+        env_file_encoding="utf-8",
     )
 
     @field_validator("database_url", mode="before")
@@ -669,7 +683,10 @@ def load_yaml_config(env: str = "dev") -> dict[str, Any]:
         with open(config_file, encoding="utf-8") as f:
             return yaml.safe_load(f) or {}
     except Exception as e:
-        print(f"Warning: Could not load {config_file}: {e}")
+        import logging
+
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Could not load {config_file}: {e}")
         return {}
 
 

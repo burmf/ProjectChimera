@@ -1,23 +1,31 @@
 """
 Simple dependency injection container for ProjectChimera
 Provides basic configuration and service management
+
+Design Reference: CLAUDE.md - Coding Guidelines Section 8 (dependency-injector pattern)
+Related Classes:
+- Settings: Configuration management via pydantic
+- Provider/Singleton patterns: Service lifecycle management
+- Used by: Orchestrator, DataFeed, Risk, Execution layers
+- DI Philosophy: Single-responsibility + async-first architecture
 """
 
+from collections.abc import Callable
 from typing import Any
 
-from .settings import get_settings
+from .settings import Settings, get_settings
 
 
 class Container:
     """Simple dependency injection container"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize container with configuration"""
-        self.config = get_settings()
-        self._providers: dict[str, Any] = {}
+        self.config: Settings = get_settings()
+        self._providers: dict[str, Callable[[], Any]] = {}
         self._singletons: dict[str, Any] = {}
 
-    def register(self, name: str, provider: Any) -> None:
+    def register(self, name: str, provider: Callable[[], Any]) -> None:
         """Register a service provider"""
         self._providers[name] = provider
 
@@ -33,7 +41,7 @@ class Container:
 
         raise KeyError(f"Service '{name}' not found in container")
 
-    def wire(self, modules: list = None) -> None:
+    def wire(self, modules: list[Any] | None = None) -> None:
         """Wire up dependencies (placeholder for dependency-injector compatibility)"""
         # Basic implementation for compatibility with tests
         pass

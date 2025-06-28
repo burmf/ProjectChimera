@@ -2,6 +2,13 @@
 Bitget Execution Engine - Phase F Implementation
 REST order placement + WebSocket fills monitoring with CircuitBreaker
 Features: 3 REST failures → pause 5 min, graceful SIGINT shutdown
+
+Design Reference: CLAUDE.md - Coding Guidelines Section 8 (AsyncIO + tenacity)
+Related Classes:
+- Signal: Input from strategies (buy/sell signals)
+- Order/Fill: Output structures for trade tracking
+- CircuitBreaker: Fault tolerance (3 failures -> 5min pause)
+- BitgetRest: HMAC authentication for order placement
 """
 
 import asyncio
@@ -26,7 +33,8 @@ try:
 
     AIOHTTP_AVAILABLE = True
 except ImportError:
-    print("aiohttp not available, using mock HTTP client")
+    logger = logging.getLogger(__name__)
+    logger.warning("aiohttp not available, using mock HTTP client")
     AIOHTTP_AVAILABLE = False
 
 try:
@@ -34,7 +42,8 @@ try:
 
     WEBSOCKETS_AVAILABLE = True
 except ImportError:
-    print("websockets not available, using mock WebSocket client")
+    logger = logging.getLogger(__name__)
+    logger.warning("websockets not available, using mock WebSocket client")
     WEBSOCKETS_AVAILABLE = False
 
 # Configure logging
@@ -429,8 +438,6 @@ class BitgetExecutionEngine:
         """Stop the execution engine gracefully"""
         logger.info("Stopping Bitget Execution Engine")
         self.running = False
-
-        from contextlib import suppress
 
         from contextlib import suppress
 

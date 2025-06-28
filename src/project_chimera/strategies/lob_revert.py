@@ -58,7 +58,7 @@ class LimitOrderBookReversionStrategy(TechnicalStrategy):
             "lookback_periods": max(self.params["rsi_period"] * 2, 50),
         }
 
-    def generate_signal(self, market_data: MarketFrame) -> Signal | None:
+    async def generate_signal(self, market_data: MarketFrame) -> Signal | None:
         """Generate limit order book reversion signal"""
         if (
             not market_data.ohlcv_1m

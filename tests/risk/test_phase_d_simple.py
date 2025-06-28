@@ -9,7 +9,7 @@ import unittest
 from datetime import datetime, timedelta
 
 # Add project to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
 try:
     from project_chimera.risk.atr_target import ATRTargetConfig, ATRTargetController
@@ -43,8 +43,7 @@ class TestDynamicKellyBasic(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures"""
         self.config = DynamicKellyConfig(
-            base_kelly_fraction=0.5,
-            min_sample_size=5  # Lower for testing
+            base_kelly_fraction=0.5, min_sample_size=5  # Lower for testing
         )
         self.calculator = DynamicKellyCalculator(self.config)
 
@@ -65,7 +64,18 @@ class TestDynamicKellyBasic(unittest.TestCase):
     def test_kelly_with_profitable_trades(self):
         """Test Kelly calculation with profitable strategy"""
         # Profitable strategy: 70% win rate, good risk/reward
-        profitable_returns = [0.05, 0.03, -0.02, 0.04, 0.01, 0.02, -0.01, 0.03, 0.02, 0.01]
+        profitable_returns = [
+            0.05,
+            0.03,
+            -0.02,
+            0.04,
+            0.01,
+            0.02,
+            -0.01,
+            0.03,
+            0.02,
+            0.01,
+        ]
 
         for ret in profitable_returns:
             self.calculator.add_trade_result(ret)
@@ -95,8 +105,7 @@ class TestATRTargetBasic(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures"""
         self.config = ATRTargetConfig(
-            target_daily_vol=0.01,
-            atr_periods=5  # Lower for testing
+            target_daily_vol=0.01, atr_periods=5  # Lower for testing
         )
         self.controller = ATRTargetController(self.config)
 
@@ -114,7 +123,7 @@ class TestATRTargetBasic(unittest.TestCase):
             high=102.0,
             low=98.0,
             close=101.0,
-            volume=1000.0
+            volume=1000.0,
         )
 
         self.controller.add_price_data(ohlcv)
@@ -132,7 +141,7 @@ class TestATRTargetBasic(unittest.TestCase):
                 high=base_price + i * 0.1 + 2.0,
                 low=base_price + i * 0.1 - 1.0,
                 close=base_price + i * 0.1 + 1.0,
-                volume=1000.0
+                volume=1000.0,
             )
             self.controller.add_price_data(ohlcv)
 
@@ -149,9 +158,7 @@ class TestDDGuardBasic(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures"""
         self.config = DDGuardConfig(
-            caution_threshold=0.05,
-            warning_threshold=0.10,
-            critical_threshold=0.20
+            caution_threshold=0.05, warning_threshold=0.10, critical_threshold=0.20
         )
         self.guard = DDGuardSystem(self.config, initial_equity=1.0)
 
@@ -195,10 +202,10 @@ class TestDDGuardBasic(unittest.TestCase):
 
         # Test specific drawdown levels
         test_cases = [
-            (1.9, 0.05),   # 5% DD
-            (1.8, 0.10),   # 10% DD
-            (1.6, 0.20),   # 20% DD
-            (1.0, 0.50),   # 50% DD
+            (1.9, 0.05),  # 5% DD
+            (1.8, 0.10),  # 10% DD
+            (1.6, 0.20),  # 20% DD
+            (1.0, 0.50),  # 50% DD
         ]
 
         for equity, expected_dd in test_cases:
@@ -237,7 +244,9 @@ class TestManualKellyReference(unittest.TestCase):
 
         # With 70% win rate and 2:1 avg win/loss, Kelly should be positive
         print(f"Manual Kelly calculation: {kelly_fraction:.4f}")
-        print(f"Win rate: {win_rate:.3f}, Avg win: {avg_win:.4f}, Avg loss: {avg_loss:.4f}")
+        print(
+            f"Win rate: {win_rate:.3f}, Avg win: {avg_win:.4f}, Avg loss: {avg_loss:.4f}"
+        )
 
 
 class TestManualATRReference(unittest.TestCase):
@@ -247,7 +256,7 @@ class TestManualATRReference(unittest.TestCase):
         """Test ATR calculation with manual implementation"""
         # Create test price data
         price_data = [
-            (100.0, 102.0, 98.0, 101.0),   # (open, high, low, close)
+            (100.0, 102.0, 98.0, 101.0),  # (open, high, low, close)
             (101.0, 103.0, 99.0, 102.0),
             (102.0, 104.0, 100.0, 103.0),
             (103.0, 105.0, 101.0, 104.0),
@@ -260,7 +269,7 @@ class TestManualATRReference(unittest.TestCase):
         for i in range(1, len(price_data)):
             curr_high = price_data[i][1]
             curr_low = price_data[i][2]
-            prev_close = price_data[i-1][3]
+            prev_close = price_data[i - 1][3]
 
             # True Range = max(high-low, abs(high-prev_close), abs(low-prev_close))
             tr1 = curr_high - curr_low
@@ -314,7 +323,7 @@ class TestManualDDReference(unittest.TestCase):
         self.assertAlmostEqual(max_drawdown, expected_max_dd, places=2)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     if MODULES_AVAILABLE:
         print("Running Phase D risk module tests...")
     else:

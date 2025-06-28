@@ -1,6 +1,13 @@
 """
 Dynamic Kelly Criterion with EWMA win-rate and ½-Kelly safety
 Enhanced version with real-time adaptation and volatility filtering
+
+Design Reference: CLAUDE.md - Risk-Engine Section 6 (kelly_frac=0.5 default)
+Related Classes:
+- UnifiedRiskEngine: Main risk orchestrator
+- ATRTargetController: Volatility-based sizing companion
+- DDGuardSystem: Drawdown protection override
+- EquityCache: Real-time equity for Kelly calculations
 """
 
 import logging

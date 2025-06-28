@@ -1,6 +1,13 @@
 """
 Abstract base class for trading strategies
 Defines the common interface for all trading strategies
+
+Design Reference: CLAUDE.md - Strategy Modules Section 5 (MVP 7 strategies)
+Related Classes:
+- Concrete strategies: weekend_effect.py, stop_rev.py, fund_contra.py, etc.
+- Risk integration: UnifiedRiskEngine for position sizing
+- Signal types: MarketFrame -> Signal (buy/sell/hold)
+- Performance tracking: PerformanceMixin for metrics
 """
 
 from abc import ABC, abstractmethod
@@ -57,7 +64,7 @@ class Strategy(ABC):
         self.validate_config()
 
     @abstractmethod
-    def generate_signal(self, market_data: MarketFrame) -> Signal | None:
+    async def generate_signal(self, market_data: MarketFrame) -> Signal | None:
         """
         Generate trading signal based on market data
 
@@ -144,8 +151,8 @@ class TechnicalStrategy(Strategy):
 
         self._price_history.append(price_point)
 
-        # Keep only last 200 periods for efficiency
-        max_history = 200
+        # Keep only last periods for efficiency (configurable via params)
+        max_history = self.params.get("max_history_periods", 200)
         if len(self._price_history) > max_history:
             self._price_history = self._price_history[-max_history:]
 
@@ -200,3 +207,81 @@ class TechnicalStrategy(Strategy):
 
         latest_row = indicators_df.iloc[-1]
         return {col: val for col, val in latest_row.items() if pd.notna(val)}
+
+    # Technical Indicator Helper Methods
+    def calculate_sma(self, prices: list[float], period: int) -> float | None:
+        """Calculate Simple Moving Average"""
+        if len(prices) < period:
+            return None
+        return sum(prices[-period:]) / period
+
+    def calculate_rsi(self, prices: list[float], period: int = 14) -> float | None:
+        """Calculate Relative Strength Index"""
+        if len(prices) < period + 1:
+            return None
+
+        deltas = [prices[i] - prices[i - 1] for i in range(1, len(prices))]
+        gains = [delta if delta > 0 else 0 for delta in deltas]
+        losses = [-delta if delta < 0 else 0 for delta in deltas]
+
+        if len(gains) < period:
+            return None
+
+        avg_gain = sum(gains[-period:]) / period
+        avg_loss = sum(losses[-period:]) / period
+
+        if avg_loss == 0:
+            return 100
+
+        rs = avg_gain / avg_loss
+        rsi = 100 - (100 / (1 + rs))
+        return rsi
+
+    def calculate_bollinger_bands(
+        self, prices: list[float], period: int = 20, std_dev: float = 2.0
+    ) -> dict[str, float] | None:
+        """Calculate Bollinger Bands"""
+        if len(prices) < period:
+            return None
+
+        sma = self.calculate_sma(prices, period)
+        if sma is None:
+            return None
+
+        recent_prices = prices[-period:]
+        variance = sum((price - sma) ** 2 for price in recent_prices) / period
+        std = variance**0.5
+
+        upper = sma + (std_dev * std)
+        lower = sma - (std_dev * std)
+        bandwidth = (upper - lower) / sma if sma != 0 else 0
+
+        return {"upper": upper, "middle": sma, "lower": lower, "bandwidth": bandwidth}
+
+    def calculate_atr(
+        self,
+        highs: list[float],
+        lows: list[float],
+        closes: list[float],
+        period: int = 14,
+    ) -> float | None:
+        """Calculate Average True Range"""
+        if (
+            len(highs) < period + 1
+            or len(lows) < period + 1
+            or len(closes) < period + 1
+        ):
+            return None
+
+        true_ranges = []
+        for i in range(1, len(closes)):
+            high_low = highs[i] - lows[i]
+            high_close_prev = abs(highs[i] - closes[i - 1])
+            low_close_prev = abs(lows[i] - closes[i - 1])
+            true_range = max(high_low, high_close_prev, low_close_prev)
+            true_ranges.append(true_range)
+
+        if len(true_ranges) < period:
+            return None
+
+        return sum(true_ranges[-period:]) / period

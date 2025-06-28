@@ -25,13 +25,14 @@ class VolBreakoutBitgetStrategy(TechnicalStrategy):
     """
 
     def __init__(self, config: StrategyConfig):
-        super().__init__(config)
+        # Set parameters before calling super() since validate_config() will be called
+        self.bb_period = config.params.get("bb_period", 20)
+        self.bb_std_dev = config.params.get("bb_std_dev", 2.0)
+        self.squeeze_threshold = config.params.get("squeeze_threshold", 0.02)  # 2%
+        self.breakout_threshold = config.params.get("breakout_threshold", 0.02)  # 2%
+        self.volume_confirm = config.params.get("volume_confirm", True)
 
-        self.bb_period = self.params.get("bb_period", 20)
-        self.bb_std_dev = self.params.get("bb_std_dev", 2.0)
-        self.squeeze_threshold = self.params.get("squeeze_threshold", 0.02)  # 2%
-        self.breakout_threshold = self.params.get("breakout_threshold", 0.02)  # 2%
-        self.volume_confirm = self.params.get("volume_confirm", True)
+        super().__init__(config)
 
     def validate_config(self) -> None:
         """Validate strategy configuration"""
@@ -51,7 +52,7 @@ class VolBreakoutBitgetStrategy(TechnicalStrategy):
             "volume_data": True,
         }
 
-    def generate_signal(self, market_data: MarketFrame) -> Signal | None:
+    async def generate_signal(self, market_data: MarketFrame) -> Signal | None:
         """Generate volatility breakout signal"""
         if not market_data.ohlcv_1m or len(market_data.ohlcv_1m) < 50:
             return None
@@ -161,13 +162,14 @@ class MiniMomentumBitgetStrategy(TechnicalStrategy):
     """
 
     def __init__(self, config: StrategyConfig):
-        super().__init__(config)
+        # Set parameters before calling super() since validate_config() will be called
+        self.momentum_bars = config.params.get("momentum_bars", 7)
+        self.zscore_threshold = config.params.get("zscore_threshold", 1.0)
+        self.lookback_period = config.params.get("lookback_period", 50)
+        self.rsi_filter = config.params.get("rsi_filter", True)
+        self.rsi_period = config.params.get("rsi_period", 14)
 
-        self.momentum_bars = self.params.get("momentum_bars", 7)
-        self.zscore_threshold = self.params.get("zscore_threshold", 1.0)
-        self.lookback_period = self.params.get("lookback_period", 50)
-        self.rsi_filter = self.params.get("rsi_filter", True)
-        self.rsi_period = self.params.get("rsi_period", 14)
+        super().__init__(config)
 
     def validate_config(self) -> None:
         """Validate strategy configuration"""
@@ -218,7 +220,7 @@ class MiniMomentumBitgetStrategy(TechnicalStrategy):
 
         return (current_value - mean_val) / std_val
 
-    def generate_signal(self, market_data: MarketFrame) -> Signal | None:
+    async def generate_signal(self, market_data: MarketFrame) -> Signal | None:
         """Generate mini-momentum signal"""
         if not market_data.ohlcv_1m or len(market_data.ohlcv_1m) < 100:
             return None
@@ -319,13 +321,14 @@ class LOBRevertBitgetStrategy(TechnicalStrategy):
     """
 
     def __init__(self, config: StrategyConfig):
-        super().__init__(config)
+        # Set parameters before calling super() since validate_config() will be called
+        self.imbalance_rsi_period = config.params.get("imbalance_rsi_period", 30)
+        self.rsi_overbought = config.params.get("rsi_overbought", 70)
+        self.rsi_oversold = config.params.get("rsi_oversold", 30)
+        self.min_spread_bps = config.params.get("min_spread_bps", 5)  # 0.05%
+        self.orderbook_levels = config.params.get("orderbook_levels", 5)
 
-        self.imbalance_rsi_period = self.params.get("imbalance_rsi_period", 30)
-        self.rsi_overbought = self.params.get("rsi_overbought", 70)
-        self.rsi_oversold = self.params.get("rsi_oversold", 30)
-        self.min_spread_bps = self.params.get("min_spread_bps", 5)  # 0.05%
-        self.orderbook_levels = self.params.get("orderbook_levels", 5)
+        super().__init__(config)
 
     def validate_config(self) -> None:
         """Validate strategy configuration"""
@@ -376,7 +379,7 @@ class LOBRevertBitgetStrategy(TechnicalStrategy):
 
         return spread_bps >= self.min_spread_bps
 
-    def generate_signal(self, market_data: MarketFrame) -> Signal | None:
+    async def generate_signal(self, market_data: MarketFrame) -> Signal | None:
         """Generate LOB mean-reversion signal"""
         if not market_data.orderbook:
             return None
@@ -474,14 +477,15 @@ class FundingAlphaBitgetStrategy(TechnicalStrategy):
     """
 
     def __init__(self, config: StrategyConfig):
-        super().__init__(config)
-
-        self.funding_threshold = self.params.get("funding_threshold", 0.0003)  # 0.03%
-        self.oi_jump_threshold = self.params.get(
+        # Set parameters before calling super() since validate_config() will be called
+        self.funding_threshold = config.params.get("funding_threshold", 0.0003)  # 0.03%
+        self.oi_jump_threshold = config.params.get(
             "oi_jump_threshold", 0.10
         )  # 10% OI increase
-        self.lookback_hours = self.params.get("lookback_hours", 24)  # 24h lookback
-        self.min_oi_size = self.params.get("min_oi_size", 1000000)  # Min $1M OI
+        self.lookback_hours = config.params.get("lookback_hours", 24)  # 24h lookback
+        self.min_oi_size = config.params.get("min_oi_size", 1000000)  # Min $1M OI
+
+        super().__init__(config)
 
     def validate_config(self) -> None:
         """Validate strategy configuration"""
@@ -514,7 +518,7 @@ class FundingAlphaBitgetStrategy(TechnicalStrategy):
         oi_change = (current_oi - recent_avg) / recent_avg
         return oi_change > self.oi_jump_threshold
 
-    def generate_signal(self, market_data: MarketFrame) -> Signal | None:
+    async def generate_signal(self, market_data: MarketFrame) -> Signal | None:
         """Generate funding rate alpha signal"""
         # This strategy requires funding rate data
         if not market_data.funding_rate:
@@ -615,16 +619,17 @@ class BasisArbBitgetStrategy(TechnicalStrategy):
     """
 
     def __init__(self, config: StrategyConfig):
-        super().__init__(config)
-
-        self.premium_threshold = self.params.get("premium_threshold", 0.005)  # 0.5%
-        self.max_premium = self.params.get("max_premium", 0.03)  # 3% max
-        self.min_volume_ratio = self.params.get(
+        # Set parameters before calling super() since validate_config() will be called
+        self.premium_threshold = config.params.get("premium_threshold", 0.005)  # 0.5%
+        self.max_premium = config.params.get("max_premium", 0.03)  # 3% max
+        self.min_volume_ratio = config.params.get(
             "min_volume_ratio", 0.1
         )  # 10% of perp volume
-        self.convergence_target = self.params.get(
+        self.convergence_target = config.params.get(
             "convergence_target", 0.001
         )  # 0.1% target
+
+        super().__init__(config)
 
     def validate_config(self) -> None:
         """Validate strategy configuration"""
@@ -659,7 +664,7 @@ class BasisArbBitgetStrategy(TechnicalStrategy):
         volume_ratio = spot_volume / perp_volume
         return volume_ratio >= self.min_volume_ratio
 
-    def generate_signal(self, market_data: MarketFrame) -> Signal | None:
+    async def generate_signal(self, market_data: MarketFrame) -> Signal | None:
         """Generate basis arbitrage signal"""
         # This strategy requires both spot and futures data
         # In real implementation, would need dual market data feeds

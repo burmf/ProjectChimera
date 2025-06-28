@@ -1,6 +1,13 @@
 """
 Bitget WebSocket Feed Implementation - FEED-02
 Real-time data streams with tenacity reconnection and latency monitoring
+
+Design Reference: CLAUDE.md - Data Sources Section 7 (WS Channels: books/trade/ticker/funding/OI)
+Related Classes:
+- DataFeedBase: Abstract base with tenacity retry logic
+- MarketFrame: Unified output structure for strategies
+- BitgetAuth: HMAC signing for private channels
+- PromExporter: ws_latency_ms metric collection
 """
 
 import asyncio
@@ -241,9 +248,9 @@ class BitgetWebSocketFeed(ExchangeAdapter):
 
             # Authenticate with Bitget
             await self._authenticate_private_websocket()
-            
+
             logger.info("private_websocket_connected")
-            
+
         except Exception as e:
             logger.error("private_websocket_connection_failed", error=str(e))
             raise
@@ -252,25 +259,25 @@ class BitgetWebSocketFeed(ExchangeAdapter):
         """Authenticate private WebSocket connection"""
         timestamp = str(int(time.time() * 1000))
         message = timestamp + "GET" + "/user/verify"
-        
+
         signature = hmac.new(
-            self.secret_key.encode('utf-8'),
-            message.encode('utf-8'),
-            hashlib.sha256
+            self.secret_key.encode("utf-8"), message.encode("utf-8"), hashlib.sha256
         ).digest()
-        
-        sign = base64.b64encode(signature).decode('utf-8')
-        
+
+        sign = base64.b64encode(signature).decode("utf-8")
+
         login_msg = {
             "op": "login",
-            "args": [{
-                "apiKey": self.api_key,
-                "passphrase": self.passphrase,
-                "timestamp": timestamp,
-                "sign": sign
-            }]
+            "args": [
+                {
+                    "apiKey": self.api_key,
+                    "passphrase": self.passphrase,
+                    "timestamp": timestamp,
+                    "sign": sign,
+                }
+            ],
         }
-        
+
         await self.private_ws.send(json.dumps(login_msg))
         logger.info("private_websocket_auth_sent")
 
@@ -384,11 +391,15 @@ class BitgetWebSocketFeed(ExchangeAdapter):
             # Bitget v2 WebSocket subscription format
             subscribe_msg = {
                 "op": "subscribe",
-                "args": [{
-                    "instType": "SPOT",
-                    "channel": channel,
-                    "instId": channel.split('.')[1] if '.' in channel else "BTCUSDT"
-                }],
+                "args": [
+                    {
+                        "instType": "SPOT",
+                        "channel": channel,
+                        "instId": (
+                            channel.split(".")[1] if "." in channel else "BTCUSDT"
+                        ),
+                    }
+                ],
             }
 
             await self.spot_ws.send(json.dumps(subscribe_msg))
@@ -412,11 +423,15 @@ class BitgetWebSocketFeed(ExchangeAdapter):
             # Bitget v2 WebSocket subscription format for futures
             subscribe_msg = {
                 "op": "subscribe",
-                "args": [{
-                    "instType": "USDT-FUTURES",
-                    "channel": channel,
-                    "instId": channel.split('.')[1] if '.' in channel else "BTCUSDT"
-                }],
+                "args": [
+                    {
+                        "instType": "USDT-FUTURES",
+                        "channel": channel,
+                        "instId": (
+                            channel.split(".")[1] if "." in channel else "BTCUSDT"
+                        ),
+                    }
+                ],
             }
 
             await self.mix_ws.send(json.dumps(subscribe_msg))
@@ -486,17 +501,23 @@ class BitgetWebSocketFeed(ExchangeAdapter):
                 if data.get("event") == "subscribe":
                     logger.info("subscription_confirmed", arg=data.get("arg"))
                     return
-                    
+
                 # Handle data messages
                 for msg in data["data"]:
                     if "arg" in data:
                         channel = data["arg"].get("channel", "")
-                        handler_name = channel.split(".")[0] if "." in channel else channel
+                        handler_name = (
+                            channel.split(".")[0] if "." in channel else channel
+                        )
 
                         if handler_name in self.message_handlers:
-                            await self.message_handlers[handler_name]([msg], data["arg"])
+                            await self.message_handlers[handler_name](
+                                [msg], data["arg"]
+                            )
                         else:
-                            logger.debug("unhandled_message", channel=channel, type=ws_type)
+                            logger.debug(
+                                "unhandled_message", channel=channel, type=ws_type
+                            )
 
         except json.JSONDecodeError as e:
             logger.error("json_decode_error", message=message[:100], error=str(e))
@@ -522,7 +543,9 @@ class BitgetWebSocketFeed(ExchangeAdapter):
                 logger.info("private_data_received", channel=channel, data=data["data"])
 
         except json.JSONDecodeError as e:
-            logger.error("private_json_decode_error", message=message[:100], error=str(e))
+            logger.error(
+                "private_json_decode_error", message=message[:100], error=str(e)
+            )
         except Exception as e:
             logger.error("private_message_processing_error", error=str(e))
 

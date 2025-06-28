@@ -2,7 +2,6 @@
 Tests for datafeed factory functions - targeting coverage improvement
 """
 
-
 import pytest
 
 from project_chimera.datafeed.factory import (
@@ -45,7 +44,9 @@ class TestDataFeedFactory:
         factory = DataFeedFactory()
         config = {"api_key": "test", "secret": "test"}
 
-        binance_adapter = factory.create_adapter(ExchangeType.BINANCE, "test_binance", config)
+        binance_adapter = factory.create_adapter(
+            ExchangeType.BINANCE, "test_binance", config
+        )
 
         assert binance_adapter is not None
         assert binance_adapter.name == "test_binance"
@@ -55,7 +56,9 @@ class TestDataFeedFactory:
         factory = DataFeedFactory()
         config = {"api_key": "test", "secret": "test", "passphrase": "test"}
 
-        bitget_adapter = factory.create_adapter(ExchangeType.BITGET, "test_bitget", config)
+        bitget_adapter = factory.create_adapter(
+            ExchangeType.BITGET, "test_bitget", config
+        )
 
         assert bitget_adapter is not None
         assert bitget_adapter.name == "test_bitget"

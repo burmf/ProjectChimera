@@ -28,9 +28,7 @@ class TestKellyCalculator:
 
     def setup_method(self):
         self.kelly = KellyCalculator(
-            lookback_trades=100,
-            kelly_fraction=0.5,
-            min_trades=10
+            lookback_trades=100, kelly_fraction=0.5, min_trades=10
         )
 
     def test_kelly_reference_math(self):
@@ -57,7 +55,9 @@ class TestKellyCalculator:
         # Allow ±1e-6 tolerance as required
         assert abs(result.fraction - expected_fractional) < 1e-6
         assert abs(result.win_rate - 0.6) < 0.05  # 5% tolerance for win rate
-        assert abs(result.avg_win / result.avg_loss - 2.0) < 0.1  # 10% tolerance for ratio
+        assert (
+            abs(result.avg_win / result.avg_loss - 2.0) < 0.1
+        )  # 10% tolerance for ratio
 
     def test_kelly_with_random_pnl(self):
         """Test Kelly calculation reproduces reference math with random P&L"""
@@ -66,8 +66,8 @@ class TestKellyCalculator:
         scenarios = [
             # (win_rate, avg_win, avg_loss, expected_kelly_approx)
             (0.7, 0.015, 0.01, 0.55),  # Good system
-            (0.4, 0.05, 0.02, 0.0),    # Bad system (negative Kelly)
-            (0.55, 0.02, 0.02, 0.1),   # Marginal system
+            (0.4, 0.05, 0.02, 0.0),  # Bad system (negative Kelly)
+            (0.55, 0.02, 0.02, 0.1),  # Marginal system
         ]
 
         for win_rate, avg_win, avg_loss, expected_kelly in scenarios:
@@ -143,7 +143,7 @@ class TestDrawdownManager:
             warning_threshold=0.10,  # 10%
             critical_threshold=0.20,  # 20%
             warning_multiplier=0.5,
-            critical_multiplier=0.0
+            critical_multiplier=0.0,
         )
 
     def test_drawdown_tier_thresholds(self):
@@ -215,7 +215,7 @@ class TestDrawdownManager:
         # High volatility should make thresholds more lenient
         # (This is somewhat stochastic, so we just check it runs)
         metrics = dd_mgr.get_metrics()
-        assert 'daily_volatility' in metrics
+        assert "daily_volatility" in metrics
 
 
 class TestATRPositionSizer:
@@ -223,8 +223,7 @@ class TestATRPositionSizer:
 
     def setup_method(self):
         self.atr_sizer = ATRPositionSizer(
-            target_daily_vol=0.01,  # 1% target
-            max_position_pct=0.5
+            target_daily_vol=0.01, max_position_pct=0.5  # 1% target
         )
 
     def generate_ohlcv_data(self, periods: int = 50, base_price: float = 100.0) -> list:
@@ -235,7 +234,7 @@ class TestATRPositionSizer:
         for i in range(periods):
             # Random walk with some volatility
             change_pct = random.gauss(0, 0.02)  # 2% daily vol
-            price *= (1 + change_pct)
+            price *= 1 + change_pct
 
             high = price * 1.01
             low = price * 0.99
@@ -249,7 +248,7 @@ class TestATRPositionSizer:
                 low=Decimal(str(round(low, 2))),
                 close=Decimal(str(round(close_price, 2))),
                 volume=Decimal("1000"),
-                timestamp=datetime.now() - timedelta(minutes=periods-i)
+                timestamp=datetime.now() - timedelta(minutes=periods - i),
             )
             candles.append(candle)
 
@@ -261,9 +260,7 @@ class TestATRPositionSizer:
         ohlcv_data = self.generate_ohlcv_data(50, 45000)
 
         result = self.atr_sizer.calculate_position_size(
-            current_price=45000.0,
-            ohlcv_data=ohlcv_data,
-            portfolio_value=10000.0
+            current_price=45000.0, ohlcv_data=ohlcv_data, portfolio_value=10000.0
         )
 
         assert result.atr_value > 0
@@ -279,7 +276,7 @@ class TestATRPositionSizer:
         price = 45000.0
         for i in range(30):
             change = random.gauss(0, 0.05)  # 5% daily vol
-            price *= (1 + change)
+            price *= 1 + change
 
             candle = OHLCV(
                 symbol="BTCUSDT",
@@ -288,14 +285,12 @@ class TestATRPositionSizer:
                 low=Decimal(str(price * 0.98)),
                 close=Decimal(str(price)),
                 volume=Decimal("1000"),
-                timestamp=datetime.now() - timedelta(minutes=30-i)
+                timestamp=datetime.now() - timedelta(minutes=30 - i),
             )
             high_vol_data.append(candle)
 
         result = self.atr_sizer.calculate_position_size(
-            current_price=price,
-            ohlcv_data=high_vol_data,
-            portfolio_value=10000.0
+            current_price=price, ohlcv_data=high_vol_data, portfolio_value=10000.0
         )
 
         # High volatility should result in smaller position size
@@ -304,8 +299,7 @@ class TestATRPositionSizer:
 
         # Estimate portfolio vol
         portfolio_vol = self.atr_sizer.estimate_daily_portfolio_vol(
-            result.position_size_pct,
-            result.price_volatility
+            result.position_size_pct, result.price_volatility
         )
 
         # Should be close to target (1%)
@@ -317,17 +311,15 @@ class TestATRPositionSizer:
         # Test normal case
         leverage = self.atr_sizer.calculate_leverage(
             position_size_pct=0.20,  # Want 20% position
-            available_margin=0.10,   # Have 10% margin
-            max_leverage=10.0
+            available_margin=0.10,  # Have 10% margin
+            max_leverage=10.0,
         )
 
         assert leverage == 2.0  # 20% / 10% = 2x leverage
 
         # Test leverage capping
         high_leverage = self.atr_sizer.calculate_leverage(
-            position_size_pct=0.50,
-            available_margin=0.02,
-            max_leverage=5.0
+            position_size_pct=0.50, available_margin=0.02, max_leverage=5.0
         )
 
         assert high_leverage == 5.0  # Capped at max
@@ -343,12 +335,7 @@ class TestEquityCache:
         """Test basic equity point addition and retrieval"""
 
         # Add some equity points
-        points = [
-            (1.0, 0.0),
-            (1.05, 0.05),
-            (0.98, -0.07),
-            (1.02, 0.04)
-        ]
+        points = [(1.0, 0.0), (1.05, 0.05), (0.98, -0.07), (1.02, 0.04)]
 
         for i, (equity, pnl) in enumerate(points):
             timestamp = datetime.now() + timedelta(minutes=i)
@@ -431,7 +418,7 @@ class TestRiskEngine:
             price=Decimal("45000"),
             timestamp=datetime.now(),
             strategy_name="test_strategy",
-            confidence=0.7
+            confidence=0.7,
         )
 
     def create_test_market_frame(self) -> MarketFrame:
@@ -442,7 +429,7 @@ class TestRiskEngine:
 
         for i in range(50):
             change = random.gauss(0, 0.02)
-            price *= (1 + change)
+            price *= 1 + change
 
             candle = OHLCV(
                 symbol="BTCUSDT",
@@ -451,14 +438,12 @@ class TestRiskEngine:
                 low=Decimal(str(price * 0.99)),
                 close=Decimal(str(price)),
                 volume=Decimal("1000"),
-                timestamp=datetime.now() - timedelta(minutes=50-i)
+                timestamp=datetime.now() - timedelta(minutes=50 - i),
             )
             ohlcv_data.append(candle)
 
         return MarketFrame(
-            symbol="BTCUSDT",
-            timestamp=datetime.now(),
-            ohlcv_1m=ohlcv_data
+            symbol="BTCUSDT", timestamp=datetime.now(), ohlcv_1m=ohlcv_data
         )
 
     def test_position_sizing_integration(self):
@@ -474,9 +459,7 @@ class TestRiskEngine:
 
         # Calculate position size
         decision = self.engine.calculate_position_size(
-            signal=signal,
-            market_data=market_data,
-            portfolio_value=10000.0
+            signal=signal, market_data=market_data, portfolio_value=10000.0
         )
 
         assert isinstance(decision, RiskDecision)
@@ -495,18 +478,14 @@ class TestRiskEngine:
 
         # Start with normal portfolio
         decision1 = self.engine.calculate_position_size(
-            signal=signal,
-            market_data=market_data,
-            portfolio_value=10000.0
+            signal=signal, market_data=market_data, portfolio_value=10000.0
         )
 
         # Simulate large loss (15% drawdown)
         self.engine.update_trade_result(-0.15, 8500.0)
 
         decision2 = self.engine.calculate_position_size(
-            signal=signal,
-            market_data=market_data,
-            portfolio_value=8500.0
+            signal=signal, market_data=market_data, portfolio_value=8500.0
         )
 
         # Position size should be reduced due to drawdown
@@ -525,20 +504,20 @@ class TestRiskEngine:
         metrics = self.engine.get_risk_metrics()
 
         # Check structure
-        assert 'kelly' in metrics
-        assert 'drawdown' in metrics
-        assert 'atr' in metrics
-        assert 'equity' in metrics
+        assert "kelly" in metrics
+        assert "drawdown" in metrics
+        assert "atr" in metrics
+        assert "equity" in metrics
 
         # Check Kelly metrics
-        kelly_metrics = metrics['kelly']
-        assert 'total_trades' in kelly_metrics
-        assert 'win_rate' in kelly_metrics
+        kelly_metrics = metrics["kelly"]
+        assert "total_trades" in kelly_metrics
+        assert "win_rate" in kelly_metrics
 
         # Check drawdown metrics
-        dd_metrics = metrics['drawdown']
-        assert 'current_pct' in dd_metrics
-        assert 'can_trade' in dd_metrics
+        dd_metrics = metrics["drawdown"]
+        assert "current_pct" in dd_metrics
+        assert "can_trade" in dd_metrics
 
     def test_state_persistence(self, tmp_path):
         """Test saving and loading engine state"""

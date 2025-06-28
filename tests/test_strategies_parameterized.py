@@ -3,11 +3,12 @@ Enhanced parameterized tests for all trading strategies
 Comprehensive test coverage using pytest.mark.parametrize
 """
 
-import pytest
-import random
 from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Any
+
+import pytest
+
 from project_chimera.domains.market import (
     OHLCV,
     MarketFrame,
@@ -27,26 +28,56 @@ class ParameterizedTestData:
     def generate_market_scenarios() -> list[tuple[str, dict[str, Any]]]:
         """Generate various market scenarios for testing"""
         return [
-            ("strong_uptrend", {
-                "trend_pct": 0.05, "volatility": 0.02, "periods": 100,
-                "expected_signals": ["BUY"], "min_confidence": 0.6
-            }),
-            ("strong_downtrend", {
-                "trend_pct": -0.05, "volatility": 0.02, "periods": 100,
-                "expected_signals": ["SELL"], "min_confidence": 0.6
-            }),
-            ("sideways_low_vol", {
-                "trend_pct": 0.001, "volatility": 0.005, "periods": 100,
-                "expected_signals": [], "min_confidence": 0.0
-            }),
-            ("sideways_high_vol", {
-                "trend_pct": 0.001, "volatility": 0.03, "periods": 100,
-                "expected_signals": ["BUY", "SELL"], "min_confidence": 0.4
-            }),
-            ("choppy_market", {
-                "trend_pct": 0.0, "volatility": 0.025, "periods": 100,
-                "expected_signals": [], "min_confidence": 0.0
-            })
+            (
+                "strong_uptrend",
+                {
+                    "trend_pct": 0.05,
+                    "volatility": 0.02,
+                    "periods": 100,
+                    "expected_signals": ["BUY"],
+                    "min_confidence": 0.6,
+                },
+            ),
+            (
+                "strong_downtrend",
+                {
+                    "trend_pct": -0.05,
+                    "volatility": 0.02,
+                    "periods": 100,
+                    "expected_signals": ["SELL"],
+                    "min_confidence": 0.6,
+                },
+            ),
+            (
+                "sideways_low_vol",
+                {
+                    "trend_pct": 0.001,
+                    "volatility": 0.005,
+                    "periods": 100,
+                    "expected_signals": [],
+                    "min_confidence": 0.0,
+                },
+            ),
+            (
+                "sideways_high_vol",
+                {
+                    "trend_pct": 0.001,
+                    "volatility": 0.03,
+                    "periods": 100,
+                    "expected_signals": ["BUY", "SELL"],
+                    "min_confidence": 0.4,
+                },
+            ),
+            (
+                "choppy_market",
+                {
+                    "trend_pct": 0.0,
+                    "volatility": 0.025,
+                    "periods": 100,
+                    "expected_signals": [],
+                    "min_confidence": 0.0,
+                },
+            ),
         ]
 
     @staticmethod
@@ -58,34 +89,37 @@ class ParameterizedTestData:
             ("15m", 15),
             ("1h", 60),
             ("4h", 240),
-            ("1d", 1440)
+            ("1d", 1440),
         ]
 
     @staticmethod
     def generate_symbol_scenarios() -> list[str]:
         """Generate different trading symbols"""
         return [
-            "BTCUSDT", "ETHUSDT", "ADAUSDT", "DOGEUSDT",
-            "SOLUSDT", "MATICUSDT", "AVAXUSDT", "DOTUSDT"
+            "BTCUSDT",
+            "ETHUSDT",
+            "ADAUSDT",
+            "DOGEUSDT",
+            "SOLUSDT",
+            "MATICUSDT",
+            "AVAXUSDT",
+            "DOTUSDT",
         ]
 
     @staticmethod
     def generate_price_levels() -> list[float]:
         """Generate different price levels for testing"""
         return [
-            1.0,      # Low price (like DOGE)
-            100.0,    # Medium price (like ADA)
-            3000.0,   # High price (like ETH)
+            1.0,  # Low price (like DOGE)
+            100.0,  # Medium price (like ADA)
+            3000.0,  # High price (like ETH)
             50000.0,  # Very high price (like BTC)
-            0.001     # Very low price (micro-cap)
+            0.001,  # Very low price (micro-cap)
         ]
 
     @staticmethod
     def create_ohlcv_with_pattern(
-        symbol: str,
-        base_price: float,
-        pattern_type: str,
-        periods: int = 100
+        symbol: str, base_price: float, pattern_type: str, periods: int = 100
     ) -> list[OHLCV]:
         """Create OHLCV data with specific patterns"""
         start_time = datetime.now() - timedelta(minutes=periods)
@@ -107,7 +141,9 @@ class ParameterizedTestData:
             elif pattern_type == "squeeze":
                 # Bollinger Band squeeze pattern
                 if i < periods * 0.7:
-                    vol_factor = 0.002 * (1 - i / (periods * 0.7))  # Decreasing volatility
+                    vol_factor = 0.002 * (
+                        1 - i / (periods * 0.7)
+                    )  # Decreasing volatility
                     trend_factor = 1
                 else:
                     vol_factor = 0.02  # Breakout volatility
@@ -133,7 +169,7 @@ class ParameterizedTestData:
                 close=Decimal(str(round(close_price, 6))),
                 volume=volume,
                 timestamp=timestamp,
-                timeframe="1m"
+                timeframe="1m",
             )
             candles.append(candle)
             price = new_price
@@ -144,61 +180,68 @@ class ParameterizedTestData:
 class TestStrategyParameterized:
     """Parameterized tests for all strategies"""
 
-    @pytest.mark.parametrize("symbol", ParameterizedTestData.generate_symbol_scenarios())
-    @pytest.mark.parametrize("base_price", ParameterizedTestData.generate_price_levels())
-    def test_all_strategies_different_symbols_and_prices(self, symbol: str, base_price: float):
+    @pytest.mark.parametrize(
+        "symbol", ParameterizedTestData.generate_symbol_scenarios()
+    )
+    @pytest.mark.parametrize(
+        "base_price", ParameterizedTestData.generate_price_levels()
+    )
+    def test_all_strategies_different_symbols_and_prices(
+        self, symbol: str, base_price: float
+    ):
         """Test all strategies work with different symbols and price levels"""
         # Create standard trending data
         candles = ParameterizedTestData.create_ohlcv_with_pattern(
-            symbol=symbol,
-            base_price=base_price,
-            pattern_type="uptrend",
-            periods=60
+            symbol=symbol, base_price=base_price, pattern_type="uptrend", periods=60
         )
 
         market_frame = MarketFrame(
-            symbol=symbol,
-            timestamp=datetime.now(),
-            ohlcv_1m=candles
+            symbol=symbol, timestamp=datetime.now(), ohlcv_1m=candles
         )
 
         strategies = [
-            VolatilityBreakoutStrategy(StrategyConfig(
-                name="vol_breakout",
-                params={
-                    "bb_period": 20,
-                    "bb_multiplier": 2.0,
-                    "volume_multiplier": 2.0,
-                    "squeeze_threshold": 0.1,
-                    "breakout_threshold": 0.02
-                }
-            )),
-            MiniMomentumStrategy(StrategyConfig(
-                name="mini_momentum",
-                params={
-                    "momentum_period": 7,
-                    "momentum_threshold": 0.02,
-                    "rsi_period": 14,
-                    "rsi_oversold": 30,
-                    "rsi_overbought": 70,
-                    "volume_lookback": 20,
-                    "volume_threshold": 1.2,
-                    "atr_period": 14,
-                    "atr_multiplier": 2.0,
-                    "min_lookback": 50
-                }
-            )),
-            OrderBookMeanReversionStrategy(StrategyConfig(
-                name="ob_revert",
-                params={
-                    "imbalance_threshold": 0.2,
-                    "min_spread_threshold": 0.001,
-                    "rsi_oversold": 20,
-                    "rsi_overbought": 80,
-                    "volume_lookback": 10,
-                    "volume_threshold": 1.5
-                }
-            ))
+            VolatilityBreakoutStrategy(
+                StrategyConfig(
+                    name="vol_breakout",
+                    params={
+                        "bb_period": 20,
+                        "bb_multiplier": 2.0,
+                        "volume_multiplier": 2.0,
+                        "squeeze_threshold": 0.1,
+                        "breakout_threshold": 0.02,
+                    },
+                )
+            ),
+            MiniMomentumStrategy(
+                StrategyConfig(
+                    name="mini_momentum",
+                    params={
+                        "momentum_period": 7,
+                        "momentum_threshold": 0.02,
+                        "rsi_period": 14,
+                        "rsi_oversold": 30,
+                        "rsi_overbought": 70,
+                        "volume_lookback": 20,
+                        "volume_threshold": 1.2,
+                        "atr_period": 14,
+                        "atr_multiplier": 2.0,
+                        "min_lookback": 50,
+                    },
+                )
+            ),
+            OrderBookMeanReversionStrategy(
+                StrategyConfig(
+                    name="ob_revert",
+                    params={
+                        "imbalance_threshold": 0.2,
+                        "min_spread_threshold": 0.001,
+                        "rsi_oversold": 20,
+                        "rsi_overbought": 80,
+                        "volume_lookback": 10,
+                        "volume_threshold": 1.5,
+                    },
+                )
+            ),
         ]
 
         for strategy in strategies:
@@ -210,18 +253,25 @@ class TestStrategyParameterized:
                     assert signal.is_valid()
                     assert 0.0 <= signal.confidence <= 1.0
             except Exception as e:
-                pytest.fail(f"Strategy {strategy.name} failed for {symbol} at ${base_price}: {e}")
+                pytest.fail(
+                    f"Strategy {strategy.name} failed for {symbol} at ${base_price}: {e}"
+                )
 
-    @pytest.mark.parametrize("scenario_name,scenario_params", ParameterizedTestData.generate_market_scenarios())
-    def test_volatility_breakout_market_scenarios(self, scenario_name: str, scenario_params: dict[str, Any]):
+    @pytest.mark.parametrize(
+        "scenario_name,scenario_params",
+        ParameterizedTestData.generate_market_scenarios(),
+    )
+    def test_volatility_breakout_market_scenarios(
+        self, scenario_name: str, scenario_params: dict[str, Any]
+    ):
         """Test volatility breakout strategy across different market scenarios"""
         config = StrategyConfig(
             name="test_vol_breakout",
             params={
-                'bb_period': 20,
-                'squeeze_threshold': 0.02,
-                'breakout_threshold': 0.005
-            }
+                "bb_period": 20,
+                "squeeze_threshold": 0.02,
+                "breakout_threshold": 0.005,
+            },
         )
         strategy = VolatilityBreakoutStrategy(config)
 
@@ -238,13 +288,11 @@ class TestStrategyParameterized:
             symbol="BTCUSDT",
             base_price=45000.0,
             pattern_type=pattern_type,
-            periods=scenario_params["periods"]
+            periods=scenario_params["periods"],
         )
 
         market_frame = MarketFrame(
-            symbol="BTCUSDT",
-            timestamp=datetime.now(),
-            ohlcv_1m=candles
+            symbol="BTCUSDT", timestamp=datetime.now(), ohlcv_1m=candles
         )
 
         signal = strategy.generate_signal(market_frame)
@@ -267,10 +315,7 @@ class TestStrategyParameterized:
         """Test mini momentum strategy sensitivity to different momentum strengths and periods"""
         config = StrategyConfig(
             name="test_mini_momentum",
-            params={
-                'momentum_period': 7,
-                'momentum_threshold': 0.02
-            }
+            params={"momentum_period": 7, "momentum_threshold": 0.02},
         )
         strategy = MiniMomentumStrategy(config)
 
@@ -279,13 +324,11 @@ class TestStrategyParameterized:
             symbol="BTCUSDT",
             base_price=45000.0,
             pattern_type=pattern_type,
-            periods=periods
+            periods=periods,
         )
 
         market_frame = MarketFrame(
-            symbol="BTCUSDT",
-            timestamp=datetime.now(),
-            ohlcv_1m=candles
+            symbol="BTCUSDT", timestamp=datetime.now(), ohlcv_1m=candles
         )
 
         signal = strategy.generate_signal(market_frame)
@@ -294,7 +337,9 @@ class TestStrategyParameterized:
         if abs(momentum_strength) >= 0.02 and periods >= 60:
             # Strong momentum with sufficient data should generate signal
             assert signal is not None
-            expected_direction = SignalType.BUY if momentum_strength > 0 else SignalType.SELL
+            expected_direction = (
+                SignalType.BUY if momentum_strength > 0 else SignalType.SELL
+            )
             assert signal.signal_type == expected_direction
             assert signal.confidence >= 0.3
         elif periods < 30:
@@ -303,14 +348,13 @@ class TestStrategyParameterized:
 
     @pytest.mark.parametrize("imbalance_ratio", [-0.6, -0.3, -0.1, 0.1, 0.3, 0.6])
     @pytest.mark.parametrize("price_deviation", [0.001, 0.005, 0.01, 0.02])
-    def test_orderbook_reversion_parameters(self, imbalance_ratio: float, price_deviation: float):
+    def test_orderbook_reversion_parameters(
+        self, imbalance_ratio: float, price_deviation: float
+    ):
         """Test order book mean reversion with different imbalance ratios and price deviations"""
         config = StrategyConfig(
             name="test_ob_revert",
-            params={
-                'imbalance_threshold': 0.3,
-                'price_deviation_threshold': 0.005
-            }
+            params={"imbalance_threshold": 0.3, "price_deviation_threshold": 0.005},
         )
         strategy = OrderBookMeanReversionStrategy(config)
 
@@ -319,7 +363,7 @@ class TestStrategyParameterized:
             symbol="BTCUSDT",
             base_price=45000.0,
             pattern_type="uptrend" if price_deviation > 0 else "flat",
-            periods=60
+            periods=60,
         )
 
         # Create order book with specific imbalance
@@ -342,49 +386,58 @@ class TestStrategyParameterized:
             asks.append((ask_price, ask_qty))
 
         orderbook = OrderBook(
-            symbol="BTCUSDT",
-            bids=bids,
-            asks=asks,
-            timestamp=datetime.now()
+            symbol="BTCUSDT", bids=bids, asks=asks, timestamp=datetime.now()
         )
 
         market_frame = MarketFrame(
             symbol="BTCUSDT",
             timestamp=datetime.now(),
             ohlcv_1m=candles,
-            orderbook=orderbook
+            orderbook=orderbook,
         )
 
         signal = strategy.generate_signal(market_frame)
 
         # Check signal based on imbalance and deviation thresholds
         should_signal = (
-            abs(imbalance_ratio) >= config.params['imbalance_threshold'] and
-            price_deviation >= config.params['price_deviation_threshold']
+            abs(imbalance_ratio) >= config.params["imbalance_threshold"]
+            and price_deviation >= config.params["price_deviation_threshold"]
         )
 
         if should_signal:
             assert signal is not None
             # Bid heavy (positive imbalance) should generate SELL signal (reversion)
             # Ask heavy (negative imbalance) should generate BUY signal (reversion)
-            expected_direction = SignalType.SELL if imbalance_ratio > 0 else SignalType.BUY
+            expected_direction = (
+                SignalType.SELL if imbalance_ratio > 0 else SignalType.BUY
+            )
             assert signal.signal_type == expected_direction
         else:
             assert signal is None or signal.confidence < 0.5
 
-    @pytest.mark.parametrize("strategy_class,config_params", [
-        (VolatilityBreakoutStrategy, {'bb_period': 10, 'squeeze_threshold': 0.01}),
-        (VolatilityBreakoutStrategy, {'bb_period': 30, 'squeeze_threshold': 0.03}),
-        (MiniMomentumStrategy, {'momentum_period': 5, 'momentum_threshold': 0.01}),
-        (MiniMomentumStrategy, {'momentum_period': 14, 'momentum_threshold': 0.03}),
-        (OrderBookMeanReversionStrategy, {'imbalance_threshold': 0.2, 'price_deviation_threshold': 0.003}),
-        (OrderBookMeanReversionStrategy, {'imbalance_threshold': 0.4, 'price_deviation_threshold': 0.01})
-    ])
-    def test_strategy_configuration_variations(self, strategy_class, config_params: dict[str, Any]):
+    @pytest.mark.parametrize(
+        "strategy_class,config_params",
+        [
+            (VolatilityBreakoutStrategy, {"bb_period": 10, "squeeze_threshold": 0.01}),
+            (VolatilityBreakoutStrategy, {"bb_period": 30, "squeeze_threshold": 0.03}),
+            (MiniMomentumStrategy, {"momentum_period": 5, "momentum_threshold": 0.01}),
+            (MiniMomentumStrategy, {"momentum_period": 14, "momentum_threshold": 0.03}),
+            (
+                OrderBookMeanReversionStrategy,
+                {"imbalance_threshold": 0.2, "price_deviation_threshold": 0.003},
+            ),
+            (
+                OrderBookMeanReversionStrategy,
+                {"imbalance_threshold": 0.4, "price_deviation_threshold": 0.01},
+            ),
+        ],
+    )
+    def test_strategy_configuration_variations(
+        self, strategy_class, config_params: dict[str, Any]
+    ):
         """Test strategies with different configuration parameters"""
         config = StrategyConfig(
-            name=f"test_{strategy_class.__name__}",
-            params=config_params
+            name=f"test_{strategy_class.__name__}", params=config_params
         )
 
         strategy = strategy_class(config)
@@ -393,14 +446,14 @@ class TestStrategyParameterized:
         candles = ParameterizedTestData.create_ohlcv_with_pattern(
             symbol="BTCUSDT",
             base_price=45000.0,
-            pattern_type="squeeze" if strategy_class == VolatilityBreakoutStrategy else "uptrend",
-            periods=100
+            pattern_type=(
+                "squeeze" if strategy_class == VolatilityBreakoutStrategy else "uptrend"
+            ),
+            periods=100,
         )
 
         market_frame = MarketFrame(
-            symbol="BTCUSDT",
-            timestamp=datetime.now(),
-            ohlcv_1m=candles
+            symbol="BTCUSDT", timestamp=datetime.now(), ohlcv_1m=candles
         )
 
         # Should not crash with different configurations
@@ -411,7 +464,9 @@ class TestStrategyParameterized:
                 assert isinstance(signal.confidence, float)
                 assert 0.0 <= signal.confidence <= 1.0
         except Exception as e:
-            pytest.fail(f"Strategy {strategy_class.__name__} failed with config {config_params}: {e}")
+            pytest.fail(
+                f"Strategy {strategy_class.__name__} failed with config {config_params}: {e}"
+            )
 
     @pytest.mark.parametrize("insufficient_periods", [1, 5, 10, 15])
     def test_strategies_insufficient_data(self, insufficient_periods: int):
@@ -420,19 +475,17 @@ class TestStrategyParameterized:
             symbol="BTCUSDT",
             base_price=45000.0,
             pattern_type="uptrend",
-            periods=insufficient_periods
+            periods=insufficient_periods,
         )
 
         market_frame = MarketFrame(
-            symbol="BTCUSDT",
-            timestamp=datetime.now(),
-            ohlcv_1m=candles
+            symbol="BTCUSDT", timestamp=datetime.now(), ohlcv_1m=candles
         )
 
         strategies = [
             VolatilityBreakoutStrategy(StrategyConfig("vol_breakout")),
             MiniMomentumStrategy(StrategyConfig("mini_momentum")),
-            OrderBookMeanReversionStrategy(StrategyConfig("ob_revert"))
+            OrderBookMeanReversionStrategy(StrategyConfig("ob_revert")),
         ]
 
         for strategy in strategies:
@@ -446,27 +499,28 @@ class TestStrategyParameterized:
                 # Should not crash, but if it does, it should be a clear error message
                 assert "insufficient" in str(e).lower() or "data" in str(e).lower()
 
-    @pytest.mark.parametrize("error_scenario", [
-        "empty_ohlcv",
-        "single_candle",
-        "invalid_prices",
-        "future_timestamps",
-        "missing_orderbook"
-    ])
+    @pytest.mark.parametrize(
+        "error_scenario",
+        [
+            "empty_ohlcv",
+            "single_candle",
+            "invalid_prices",
+            "future_timestamps",
+            "missing_orderbook",
+        ],
+    )
     def test_strategy_error_handling(self, error_scenario: str):
         """Test strategy error handling for various edge cases"""
         strategies = [
             VolatilityBreakoutStrategy(StrategyConfig("vol_breakout")),
             MiniMomentumStrategy(StrategyConfig("mini_momentum")),
-            OrderBookMeanReversionStrategy(StrategyConfig("ob_revert"))
+            OrderBookMeanReversionStrategy(StrategyConfig("ob_revert")),
         ]
 
         # Create problematic market frame based on scenario
         if error_scenario == "empty_ohlcv":
             market_frame = MarketFrame(
-                symbol="BTCUSDT",
-                timestamp=datetime.now(),
-                ohlcv_1m=[]
+                symbol="BTCUSDT", timestamp=datetime.now(), ohlcv_1m=[]
             )
         elif error_scenario == "single_candle":
             market_frame = MarketFrame(
@@ -474,7 +528,7 @@ class TestStrategyParameterized:
                 timestamp=datetime.now(),
                 ohlcv_1m=ParameterizedTestData.create_ohlcv_with_pattern(
                     "BTCUSDT", 45000.0, "uptrend", 1
-                )
+                ),
             )
         elif error_scenario == "invalid_prices":
             # Create candle with invalid price (negative)
@@ -486,12 +540,10 @@ class TestStrategyParameterized:
                 close=Decimal("-50"),
                 volume=Decimal("1000"),
                 timestamp=datetime.now(),
-                timeframe="1m"
+                timeframe="1m",
             )
             market_frame = MarketFrame(
-                symbol="BTCUSDT",
-                timestamp=datetime.now(),
-                ohlcv_1m=[invalid_candle]
+                symbol="BTCUSDT", timestamp=datetime.now(), ohlcv_1m=[invalid_candle]
             )
         elif error_scenario == "future_timestamps":
             future_candles = ParameterizedTestData.create_ohlcv_with_pattern(
@@ -502,9 +554,7 @@ class TestStrategyParameterized:
                 candle.timestamp = datetime.now() + timedelta(minutes=i)
 
             market_frame = MarketFrame(
-                symbol="BTCUSDT",
-                timestamp=datetime.now(),
-                ohlcv_1m=future_candles
+                symbol="BTCUSDT", timestamp=datetime.now(), ohlcv_1m=future_candles
             )
         else:  # missing_orderbook
             market_frame = MarketFrame(
@@ -513,7 +563,7 @@ class TestStrategyParameterized:
                 ohlcv_1m=ParameterizedTestData.create_ohlcv_with_pattern(
                     "BTCUSDT", 45000.0, "uptrend", 60
                 ),
-                orderbook=None  # Missing orderbook for OB strategy
+                orderbook=None,  # Missing orderbook for OB strategy
             )
 
         for strategy in strategies:

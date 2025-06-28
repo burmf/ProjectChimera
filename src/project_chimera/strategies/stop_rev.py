@@ -20,9 +20,9 @@ class StopReversionStrategy(TechnicalStrategy):
     """
 
     def __init__(self, config: StrategyConfig):
-        super().__init__(config)
-        # Load strategy-specific settings
+        # Load strategy-specific settings before calling super()
         self.strategy_settings = get_strategy_config("stop_reversion")
+        super().__init__(config)
 
     def validate_config(self) -> None:
         """Validate strategy configuration"""
@@ -81,7 +81,7 @@ class StopReversionStrategy(TechnicalStrategy):
             "lookback_periods": max(self.params["lookback_periods"], 50),
         }
 
-    def generate_signal(self, market_data: MarketFrame) -> Signal | None:
+    async def generate_signal(self, market_data: MarketFrame) -> Signal | None:
         """Generate stop loss reversion signal"""
         if (
             not market_data.ohlcv_5m

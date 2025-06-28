@@ -82,7 +82,7 @@ class StreamConsumer:
                 )
 
                 # Process messages
-                for stream_name, stream_messages in messages:
+                for _stream_name, stream_messages in messages:
                     for message_id, fields in stream_messages:
                         try:
                             await self._process_message(

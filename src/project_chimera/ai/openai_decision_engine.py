@@ -1,6 +1,13 @@
 """
 OpenAI o3 Decision Engine for ProjectChimera
 Handles AI-driven trading decisions using OpenAI's o3 model
+
+Design Reference: CLAUDE.md - AI Department System (部門別AIシステム)
+Related Classes:
+- TradingPrompts: Specialized prompts for trading decisions
+- TradingDecisionProcessor: JSON response parsing
+- RedisStreamPipeline: Message streaming for AI decisions
+- AIDecisionMessage: Structured AI output format
 """
 
 import asyncio
@@ -123,8 +130,6 @@ class OpenAIDecisionEngine:
             self._decision_1min_task.cancel()
         if self._strategy_1hour_task:
             self._strategy_1hour_task.cancel()
-
-        from contextlib import suppress
 
         from contextlib import suppress
 

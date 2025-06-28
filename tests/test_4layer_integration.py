@@ -15,9 +15,9 @@ from project_chimera.ai.openai_decision_engine import (
 from project_chimera.collectors.news_rss_collector import NewsRSSCollector
 from project_chimera.collectors.x_posts_collector import XPostsCollector
 from project_chimera.orchestrator_4layer import (
-    OrchestratorConfig,
     ProjectChimera4LayerOrchestrator,
 )
+from project_chimera.settings import Settings
 from project_chimera.streams.message_types import (
     AIDecisionMessage,
     MarketDataMessage,
@@ -40,20 +40,6 @@ async def redis_pipeline():
     return pipeline
 
 
-@pytest.fixture
-def orchestrator_config():
-    """Create test configuration for orchestrator"""
-    return OrchestratorConfig(
-        trading_symbols=["BTCUSDT", "ETHUSDT"],
-        news_collection_interval_hours=1,
-        x_posts_collection_interval_hours=1,
-        ai_1min_interval_seconds=60,
-        ai_1hour_interval_seconds=3600,
-        initial_portfolio_value=150000.0,
-        redis_url="redis://localhost:6379"
-    )
-
-
 class TestRedisStreamsPipeline:
     """Test Redis Streams pipeline functionality"""
 
@@ -69,7 +55,7 @@ class TestRedisStreamsPipeline:
             ask=50001.0,
             last=50000.5,
             volume=1000.0,
-            orderbook_imbalance=0.1
+            orderbook_imbalance=0.1,
         )
 
         # Convert to dict and back
@@ -85,7 +71,7 @@ class TestRedisStreamsPipeline:
             content="Test content",
             url="https://test.com",
             relevance_score=0.8,
-            tags=["crypto", "bitcoin"]
+            tags=["crypto", "bitcoin"],
         )
 
         data_dict = news_msg.to_dict()
@@ -114,14 +100,13 @@ class TestNewsRSSCollector:
         # Test high relevance content
         high_relevance = collector._calculate_relevance(
             "Bitcoin Price Breaks $50K",
-            "Bitcoin trading volume surged as the cryptocurrency broke through key resistance levels"
+            "Bitcoin trading volume surged as the cryptocurrency broke through key resistance levels",
         )
         assert high_relevance > 0.2  # Adjusted threshold based on actual calculation
 
         # Test low relevance content
         low_relevance = collector._calculate_relevance(
-            "Weather Update",
-            "Today will be sunny with mild temperatures"
+            "Weather Update", "Today will be sunny with mild temperatures"
         )
         assert low_relevance < 0.1
 
@@ -137,7 +122,7 @@ class TestNewsRSSCollector:
             title="Bitcoin Surges on Institutional Adoption",
             content="Major institutions are increasing their Bitcoin holdings",
             url="https://test.com/1",
-            relevance_score=0.8
+            relevance_score=0.8,
         )
 
         irrelevant_news = NewsMessage(
@@ -146,7 +131,7 @@ class TestNewsRSSCollector:
             title="Local Sports Update",
             content="The local team won their game yesterday",
             url="https://test.com/2",
-            relevance_score=0.05
+            relevance_score=0.05,
         )
 
         assert collector._is_relevant_article(relevant_news)
@@ -214,7 +199,7 @@ class TestAIDecisionEngine:
             openai_api_key="test_key",
             model_name="o3-mini",
             max_tokens=1000,
-            temperature=0.1
+            temperature=0.1,
         )
 
         assert config.openai_api_key == "test_key"
@@ -228,7 +213,7 @@ class TestAIDecisionEngine:
         ai_engine = OpenAIDecisionEngine(config, redis_pipeline)
 
         # Test valid JSON response
-        valid_response = '''
+        valid_response = """
         {
             "action": "buy",
             "confidence": 0.8,
@@ -240,7 +225,7 @@ class TestAIDecisionEngine:
             "key_signals": ["momentum", "volume"],
             "risk_factors": ["volatility"]
         }
-        '''
+        """
 
         decision = ai_engine._parse_ai_response(valid_response, "1min_trade", "BTCUSDT")
 
@@ -254,57 +239,110 @@ class TestAIDecisionEngine:
     async def test_ai_decision_confidence_filtering(self, redis_pipeline):
         """Test confidence threshold filtering"""
         config = AIDecisionConfig(
-            openai_api_key="test_key",
-            min_confidence_threshold=0.7
+            openai_api_key="test_key", min_confidence_threshold=0.7
         )
         ai_engine = OpenAIDecisionEngine(config, redis_pipeline)
 
         # Test low confidence response (should be converted to hold)
-        low_confidence_response = '''
+        low_confidence_response = """
         {
             "action": "buy",
             "confidence": 0.5,
             "reasoning": "Weak signal",
             "position_size_pct": 0.02
         }
-        '''
+        """
 
-        decision = ai_engine._parse_ai_response(low_confidence_response, "1min_trade", "BTCUSDT")
+        decision = ai_engine._parse_ai_response(
+            low_confidence_response, "1min_trade", "BTCUSDT"
+        )
 
         assert decision is not None
-        assert decision.action == "hold"  # Should be forced to hold due to low confidence
+        assert (
+            decision.action == "hold"
+        )  # Should be forced to hold due to low confidence
 
 
 class TestOrchestrator4Layer:
     """Test the complete 4-layer orchestrator"""
 
     @pytest.mark.asyncio
-    async def test_orchestrator_initialization(self, orchestrator_config):
+    @patch("project_chimera.orchestrator_4layer.get_settings")
+    async def test_orchestrator_initialization(self, mock_get_settings):
         """Test orchestrator can be initialized"""
-        orchestrator = ProjectChimera4LayerOrchestrator(orchestrator_config)
+        mock_settings = MagicMock(spec=Settings)
+        mock_settings.layer_system.initial_portfolio_value = 150000.0
+        mock_get_settings.return_value = mock_settings
 
-        assert orchestrator.config == orchestrator_config
+        orchestrator = ProjectChimera4LayerOrchestrator()
+
+        assert orchestrator.settings == mock_settings
         assert orchestrator.stats["start_time"] is None
         assert not orchestrator._running
 
     @pytest.mark.asyncio
-    @patch('project_chimera.orchestrator_4layer.RedisStreamPipeline')
-    @patch('project_chimera.orchestrator_4layer.NewsRSSCollector')
-    @patch('project_chimera.orchestrator_4layer.XPostsCollector')
-    @patch('project_chimera.orchestrator_4layer.OpenAIDecisionEngine')
+    @patch("project_chimera.orchestrator_4layer.RedisStreamPipeline")
+    @patch("project_chimera.orchestrator_4layer.NewsRSSCollector")
+    @patch("project_chimera.orchestrator_4layer.XPostsCollector")
+    @patch("project_chimera.orchestrator_4layer.OpenAIDecisionEngine")
+    @patch("project_chimera.orchestrator_4layer.get_settings")
     async def test_orchestrator_startup_sequence(
-        self, mock_ai_engine, mock_x_collector, mock_news_collector,
-        mock_redis_pipeline, orchestrator_config
+        self,
+        mock_get_settings,
+        mock_ai_engine,
+        mock_x_collector,
+        mock_news_collector,
+        mock_redis_pipeline,
     ):
         """Test orchestrator startup sequence"""
 
         # Mock all components
+        mock_settings = MagicMock(spec=Settings)
+        mock_settings.layer_system.ai.enable_1min_decisions = True
+        mock_settings.layer_system.ai.enable_1hour_strategy = True
+        mock_settings.layer_system.news_collector.collection_interval_hours = 1
+        mock_settings.layer_system.x_posts_collector.collection_interval_hours = 1
+        mock_settings.layer_system.initial_portfolio_value = 150000.0
+        mock_settings.layer_system.redis_streams.redis_url = "redis://localhost:6379"
+        mock_settings.layer_system.redis_streams.market_data_stream = "market_data"
+        mock_settings.layer_system.redis_streams.ai_processors_group = "ai_processors"
+        mock_settings.layer_system.redis_streams.news_stream = "news"
+        mock_settings.layer_system.redis_streams.x_posts_stream = "x_posts"
+        mock_settings.layer_system.redis_streams.ai_decisions_stream = "ai_decisions"
+        mock_settings.layer_system.execution_group = "execution"
+        mock_settings.layer_system.enable_learning_data_storage = True
+        mock_settings.layer_system.health_check_interval_seconds = 30
+        mock_settings.layer_system.enable_performance_monitoring = True
+        mock_settings.layer_system.max_risk_adjusted_size_pct = 0.02
+        mock_settings.layer_system.risk_multiplier = 0.5
+        mock_settings.layer_system.default_trade_side = "buy"
+        mock_settings.layer_system.ai.min_confidence_threshold = 0.6
+        mock_settings.risk.kelly_base_fraction = 0.5
+        mock_settings.risk.atr_target_daily_vol = 0.01
+        mock_settings.risk.dd_warning_threshold = 0.1
+        mock_settings.risk.max_leverage = 10.0
+        mock_settings.risk.min_confidence = 0.3
+        mock_settings.api.bitget_key.get_secret_value.return_value = "test_key"
+        mock_settings.api.bitget_secret.get_secret_value.return_value = "test_secret"
+        mock_settings.api.bitget_passphrase.get_secret_value.return_value = (
+            "test_passphrase"
+        )
+        mock_settings.api.bitget_sandbox = True
+        mock_settings.logs_dir = "logs"
+        mock_settings.logging.level = "INFO"
+        mock_settings.logging.format = ""
+        mock_settings.logging.rotation = ""
+        mock_settings.logging.retention = ""
+        mock_settings.env = "dev"
+
+        mock_get_settings.return_value = mock_settings
+
         mock_redis_pipeline.return_value.start = AsyncMock()
         mock_news_collector.return_value.start = AsyncMock()
         mock_x_collector.return_value.start = AsyncMock()
         mock_ai_engine.return_value.start = AsyncMock()
 
-        orchestrator = ProjectChimera4LayerOrchestrator(orchestrator_config)
+        orchestrator = ProjectChimera4LayerOrchestrator()
 
         # Mock the layer startup methods
         orchestrator._start_layer1_data_pipeline = AsyncMock()
@@ -326,9 +364,50 @@ class TestOrchestrator4Layer:
         assert orchestrator._startup_complete
 
     @pytest.mark.asyncio
-    async def test_health_status_reporting(self, orchestrator_config):
+    @patch("project_chimera.orchestrator_4layer.get_settings")
+    async def test_health_status_reporting(self, mock_get_settings):
         """Test health status reporting"""
-        orchestrator = ProjectChimera4LayerOrchestrator(orchestrator_config)
+        mock_settings = MagicMock(spec=Settings)
+        mock_settings.layer_system.initial_portfolio_value = 150000.0
+        mock_settings.layer_system.health_check_interval_seconds = 30
+        mock_settings.layer_system.enable_performance_monitoring = True
+        mock_settings.layer_system.ai.enable_1min_decisions = True
+        mock_settings.layer_system.ai.enable_1hour_strategy = True
+        mock_settings.layer_system.news_collector.collection_interval_hours = 1
+        mock_settings.layer_system.x_posts_collector.collection_interval_hours = 1
+        mock_settings.layer_system.redis_streams.redis_url = "redis://localhost:6379"
+        mock_settings.layer_system.redis_streams.market_data_stream = "market_data"
+        mock_settings.layer_system.redis_streams.ai_processors_group = "ai_processors"
+        mock_settings.layer_system.redis_streams.news_stream = "news"
+        mock_settings.layer_system.redis_streams.x_posts_stream = "x_posts"
+        mock_settings.layer_system.redis_streams.ai_decisions_stream = "ai_decisions"
+        mock_settings.layer_system.execution_group = "execution"
+        mock_settings.layer_system.enable_learning_data_storage = True
+        mock_settings.layer_system.max_risk_adjusted_size_pct = 0.02
+        mock_settings.layer_system.risk_multiplier = 0.5
+        mock_settings.layer_system.default_trade_side = "buy"
+        mock_settings.layer_system.ai.min_confidence_threshold = 0.6
+        mock_settings.risk.kelly_base_fraction = 0.5
+        mock_settings.risk.atr_target_daily_vol = 0.01
+        mock_settings.risk.dd_warning_threshold = 0.1
+        mock_settings.risk.max_leverage = 10.0
+        mock_settings.risk.min_confidence = 0.3
+        mock_settings.api.bitget_key.get_secret_value.return_value = "test_key"
+        mock_settings.api.bitget_secret.get_secret_value.return_value = "test_secret"
+        mock_settings.api.bitget_passphrase.get_secret_value.return_value = (
+            "test_passphrase"
+        )
+        mock_settings.api.bitget_sandbox = True
+        mock_settings.logs_dir = "logs"
+        mock_settings.logging.level = "INFO"
+        mock_settings.logging.format = ""
+        mock_settings.logging.rotation = ""
+        mock_settings.logging.retention = ""
+        mock_settings.env = "dev"
+
+        mock_get_settings.return_value = mock_settings
+
+        orchestrator = ProjectChimera4LayerOrchestrator()
         orchestrator.stats["start_time"] = datetime.now()
         orchestrator._running = True
         orchestrator._startup_complete = True
@@ -341,9 +420,50 @@ class TestOrchestrator4Layer:
         assert "statistics" in health
 
     @pytest.mark.asyncio
-    async def test_performance_summary(self, orchestrator_config):
+    @patch("project_chimera.orchestrator_4layer.get_settings")
+    async def test_performance_summary(self, mock_get_settings):
         """Test performance summary generation"""
-        orchestrator = ProjectChimera4LayerOrchestrator(orchestrator_config)
+        mock_settings = MagicMock(spec=Settings)
+        mock_settings.layer_system.initial_portfolio_value = 150000.0
+        mock_settings.layer_system.health_check_interval_seconds = 30
+        mock_settings.layer_system.enable_performance_monitoring = True
+        mock_settings.layer_system.ai.enable_1min_decisions = True
+        mock_settings.layer_system.ai.enable_1hour_strategy = True
+        mock_settings.layer_system.news_collector.collection_interval_hours = 1
+        mock_settings.layer_system.x_posts_collector.collection_interval_hours = 1
+        mock_settings.layer_system.redis_streams.redis_url = "redis://localhost:6379"
+        mock_settings.layer_system.redis_streams.market_data_stream = "market_data"
+        mock_settings.layer_system.redis_streams.ai_processors_group = "ai_processors"
+        mock_settings.layer_system.redis_streams.news_stream = "news"
+        mock_settings.layer_system.redis_streams.x_posts_stream = "x_posts"
+        mock_settings.layer_system.redis_streams.ai_decisions_stream = "ai_decisions"
+        mock_settings.layer_system.execution_group = "execution"
+        mock_settings.layer_system.enable_learning_data_storage = True
+        mock_settings.layer_system.max_risk_adjusted_size_pct = 0.02
+        mock_settings.layer_system.risk_multiplier = 0.5
+        mock_settings.layer_system.default_trade_side = "buy"
+        mock_settings.layer_system.ai.min_confidence_threshold = 0.6
+        mock_settings.risk.kelly_base_fraction = 0.5
+        mock_settings.risk.atr_target_daily_vol = 0.01
+        mock_settings.risk.dd_warning_threshold = 0.1
+        mock_settings.risk.max_leverage = 10.0
+        mock_settings.risk.min_confidence = 0.3
+        mock_settings.api.bitget_key.get_secret_value.return_value = "test_key"
+        mock_settings.api.bitget_secret.get_secret_value.return_value = "test_secret"
+        mock_settings.api.bitget_passphrase.get_secret_value.return_value = (
+            "test_passphrase"
+        )
+        mock_settings.api.bitget_sandbox = True
+        mock_settings.logs_dir = "logs"
+        mock_settings.logging.level = "INFO"
+        mock_settings.logging.format = ""
+        mock_settings.logging.rotation = ""
+        mock_settings.logging.retention = ""
+        mock_settings.env = "dev"
+
+        mock_get_settings.return_value = mock_settings
+
+        orchestrator = ProjectChimera4LayerOrchestrator()
         orchestrator.stats["start_time"] = datetime.now()
         orchestrator.stats["market_data_messages"] = 100
         orchestrator.stats["ai_decisions"] = 10
@@ -372,7 +492,7 @@ class TestDataFlowIntegration:
             bid=50000.0,
             ask=50001.0,
             last=50000.5,
-            volume=1000.0
+            volume=1000.0,
         )
 
         # Test message can be published
@@ -389,7 +509,7 @@ class TestDataFlowIntegration:
             title="Bitcoin Breaks $50K Resistance",
             content="Bitcoin trading volume surged as price broke key levels",
             url="https://coindesk.com/test",
-            relevance_score=0.9
+            relevance_score=0.9,
         )
 
         # Test message can be published
@@ -408,7 +528,7 @@ class TestDataFlowIntegration:
             action="buy",
             confidence=0.8,
             reasoning="Strong bullish momentum",
-            position_size_pct=0.02
+            position_size_pct=0.02,
         )
 
         # Test message can be published
@@ -417,16 +537,52 @@ class TestDataFlowIntegration:
 
 
 @pytest.mark.asyncio
-async def test_complete_system_mock_run():
+@patch("project_chimera.orchestrator_4layer.get_settings")
+async def test_complete_system_mock_run(mock_get_settings):
     """Test a complete system run with mocked components"""
 
     # This is a high-level integration test
-    config = OrchestratorConfig(
-        trading_symbols=["BTCUSDT"],
-        initial_portfolio_value=150000.0
+    mock_settings = MagicMock(spec=Settings)
+    mock_settings.layer_system.ai.enable_1min_decisions = True
+    mock_settings.layer_system.ai.enable_1hour_strategy = True
+    mock_settings.layer_system.news_collector.collection_interval_hours = 1
+    mock_settings.layer_system.x_posts_collector.collection_interval_hours = 1
+    mock_settings.layer_system.initial_portfolio_value = 150000.0
+    mock_settings.layer_system.redis_streams.redis_url = "redis://localhost:6379"
+    mock_settings.layer_system.redis_streams.market_data_stream = "market_data"
+    mock_settings.layer_system.redis_streams.ai_processors_group = "ai_processors"
+    mock_settings.layer_system.redis_streams.news_stream = "news"
+    mock_settings.layer_system.redis_streams.x_posts_stream = "x_posts"
+    mock_settings.layer_system.redis_streams.ai_decisions_stream = "ai_decisions"
+    mock_settings.layer_system.execution_group = "execution"
+    mock_settings.layer_system.enable_learning_data_storage = True
+    mock_settings.layer_system.health_check_interval_seconds = 30
+    mock_settings.layer_system.enable_performance_monitoring = True
+    mock_settings.layer_system.max_risk_adjusted_size_pct = 0.02
+    mock_settings.layer_system.risk_multiplier = 0.5
+    mock_settings.layer_system.default_trade_side = "buy"
+    mock_settings.layer_system.ai.min_confidence_threshold = 0.6
+    mock_settings.risk.kelly_base_fraction = 0.5
+    mock_settings.risk.atr_target_daily_vol = 0.01
+    mock_settings.risk.dd_warning_threshold = 0.1
+    mock_settings.risk.max_leverage = 10.0
+    mock_settings.risk.min_confidence = 0.3
+    mock_settings.api.bitget_key.get_secret_value.return_value = "test_key"
+    mock_settings.api.bitget_secret.get_secret_value.return_value = "test_secret"
+    mock_settings.api.bitget_passphrase.get_secret_value.return_value = (
+        "test_passphrase"
     )
+    mock_settings.api.bitget_sandbox = True
+    mock_settings.logs_dir = "logs"
+    mock_settings.logging.level = "INFO"
+    mock_settings.logging.format = ""
+    mock_settings.logging.rotation = ""
+    mock_settings.logging.retention = ""
+    mock_settings.env = "dev"
 
-    orchestrator = ProjectChimera4LayerOrchestrator(config)
+    mock_get_settings.return_value = mock_settings
+
+    orchestrator = ProjectChimera4LayerOrchestrator()
 
     # Mock all external dependencies
     with patch.multiple(
@@ -435,7 +591,7 @@ async def test_complete_system_mock_run():
         _start_layer2_ai_engine=AsyncMock(),
         _start_layer3_execution=AsyncMock(),
         _start_layer4_logging=AsyncMock(),
-        _start_data_flow=AsyncMock()
+        _start_data_flow=AsyncMock(),
     ):
         await orchestrator.start()
 

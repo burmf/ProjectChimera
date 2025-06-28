@@ -54,9 +54,7 @@ class TestBitgetConfig:
     def test_config_creation(self):
         """Test basic config creation"""
         config = BitgetConfig(
-            api_key="test_key",
-            secret_key="test_secret",
-            passphrase="test_pass"
+            api_key="test_key", secret_key="test_secret", passphrase="test_pass"
         )
 
         assert config.api_key == "test_key"
@@ -71,7 +69,7 @@ class TestBitgetConfig:
             api_key="test_key",
             secret_key="test_secret",
             passphrase="test_pass",
-            sandbox=True
+            sandbox=True,
         )
 
         # Post-init should set sandbox URLs
@@ -86,20 +84,22 @@ class TestBitgetConfig:
             passphrase="test_pass",
             sandbox=False,
             base_url="https://api.bitget.com",
-            ws_url="wss://ws.bitget.com/spot/v1/stream"
+            ws_url="wss://ws.bitget.com/spot/v1/stream",
         )
 
         assert config.base_url == "https://api.bitget.com"
         assert config.ws_url == "wss://ws.bitget.com/spot/v1/stream"
 
-    @patch('project_chimera.execution.bitget.get_settings')
+    @patch("project_chimera.execution.bitget.get_settings")
     def test_config_from_settings(self, mock_settings):
         """Test creating config from application settings"""
         # Mock settings structure
         mock_api_config = MagicMock()
         mock_api_config.bitget_key.get_secret_value.return_value = "settings_key"
         mock_api_config.bitget_secret.get_secret_value.return_value = "settings_secret"
-        mock_api_config.bitget_passphrase.get_secret_value.return_value = "settings_pass"
+        mock_api_config.bitget_passphrase.get_secret_value.return_value = (
+            "settings_pass"
+        )
         mock_api_config.bitget_sandbox = False
         mock_api_config.bitget_rest_url = "https://api.bitget.com"
         mock_api_config.bitget_ws_spot_url = "wss://ws.bitget.com/spot/v1/stream"
@@ -132,7 +132,7 @@ class TestOrder:
             order_type=OrderType.LIMIT,
             size=0.1,
             price=50000.0,
-            client_order_id="test_order_123"
+            client_order_id="test_order_123",
         )
 
     def test_order_creation(self, sample_order):
@@ -154,20 +154,17 @@ class TestOrder:
         """Test order conversion to dictionary"""
         order_dict = sample_order.to_dict()
 
-        assert order_dict['symbol'] == "BTCUSDT"
-        assert order_dict['side'] == "buy"  # Enum value
-        assert order_dict['order_type'] == "limit"  # Enum value
-        assert order_dict['status'] == "pending"  # Enum value
-        assert order_dict['size'] == 0.1
-        assert order_dict['price'] == 50000.0
+        assert order_dict["symbol"] == "BTCUSDT"
+        assert order_dict["side"] == "buy"  # Enum value
+        assert order_dict["order_type"] == "limit"  # Enum value
+        assert order_dict["status"] == "pending"  # Enum value
+        assert order_dict["size"] == 0.1
+        assert order_dict["price"] == 50000.0
 
     def test_order_market_type(self):
         """Test market order creation"""
         market_order = Order(
-            symbol="ETHUSDT",
-            side=OrderSide.SELL,
-            order_type=OrderType.MARKET,
-            size=1.0
+            symbol="ETHUSDT", side=OrderSide.SELL, order_type=OrderType.MARKET, size=1.0
         )
 
         assert market_order.order_type == OrderType.MARKET
@@ -209,7 +206,7 @@ class TestFill:
             price=50000.0,
             fee=0.001,
             fee_currency="USDT",
-            timestamp=datetime.now()
+            timestamp=datetime.now(),
         )
 
     def test_fill_creation(self, sample_fill):
@@ -228,12 +225,12 @@ class TestFill:
         """Test fill conversion to dictionary"""
         fill_dict = sample_fill.to_dict()
 
-        assert fill_dict['order_id'] == "12345"
-        assert fill_dict['trade_id'] == "trade_67890"
-        assert fill_dict['side'] == "buy"  # Enum value
-        assert fill_dict['size'] == 0.1
-        assert fill_dict['price'] == 50000.0
-        assert fill_dict['fee'] == 0.001
+        assert fill_dict["order_id"] == "12345"
+        assert fill_dict["trade_id"] == "trade_67890"
+        assert fill_dict["side"] == "buy"  # Enum value
+        assert fill_dict["size"] == 0.1
+        assert fill_dict["price"] == 50000.0
+        assert fill_dict["fee"] == 0.001
 
     def test_fill_different_sides(self):
         """Test fills with different order sides"""
@@ -246,7 +243,7 @@ class TestFill:
             price=50000.0,
             fee=0.001,
             fee_currency="USDT",
-            timestamp=datetime.now()
+            timestamp=datetime.now(),
         )
 
         sell_fill = Fill(
@@ -258,13 +255,13 @@ class TestFill:
             price=51000.0,
             fee=0.002,
             fee_currency="USDT",
-            timestamp=datetime.now()
+            timestamp=datetime.now(),
         )
 
         assert buy_fill.side == OrderSide.BUY
         assert sell_fill.side == OrderSide.SELL
-        assert buy_fill.to_dict()['side'] == "buy"
-        assert sell_fill.to_dict()['side'] == "sell"
+        assert buy_fill.to_dict()["side"] == "buy"
+        assert sell_fill.to_dict()["side"] == "sell"
 
 
 class TestCircuitBreaker:
@@ -348,20 +345,20 @@ class TestCircuitBreaker:
         cb = CircuitBreaker(failure_threshold=3, pause_duration=300.0)
 
         status = cb.get_status()
-        assert status['is_open'] is False
-        assert status['consecutive_failures'] == 0
-        assert status['failure_threshold'] == 3
-        assert status['can_execute'] is True
+        assert status["is_open"] is False
+        assert status["consecutive_failures"] == 0
+        assert status["failure_threshold"] == 3
+        assert status["can_execute"] is True
 
         # Trigger circuit breaker
         for _ in range(3):
             cb.record_failure()
 
         status = cb.get_status()
-        assert status['is_open'] is True
-        assert status['consecutive_failures'] == 3
-        assert status['can_execute'] is False
-        assert status['remaining_pause_seconds'] > 0
+        assert status["is_open"] is True
+        assert status["consecutive_failures"] == 3
+        assert status["can_execute"] is False
+        assert status["remaining_pause_seconds"] > 0
 
 
 class TestMockClasses:
@@ -425,7 +422,7 @@ class TestBitgetExecutionEngine:
             api_key="test_key",
             secret_key="test_secret",
             passphrase="test_pass",
-            sandbox=True
+            sandbox=True,
         )
 
     @pytest.fixture
@@ -442,7 +439,7 @@ class TestBitgetExecutionEngine:
         assert len(execution_engine.fills) == 0
         assert execution_engine.ws_connection is None
         assert execution_engine.ws_task is None
-        assert execution_engine.metrics['orders_placed'] == 0
+        assert execution_engine.metrics["orders_placed"] == 0
 
     def test_engine_signature_generation(self, execution_engine):
         """Test API signature generation"""
@@ -451,7 +448,9 @@ class TestBitgetExecutionEngine:
         request_path = "/api/spot/v1/trade/orders"
         body = '{"symbol":"BTCUSDT"}'
 
-        signature = execution_engine._generate_signature(timestamp, method, request_path, body)
+        signature = execution_engine._generate_signature(
+            timestamp, method, request_path, body
+        )
 
         assert isinstance(signature, str)
         assert len(signature) == 64  # SHA256 hex digest length
@@ -464,25 +463,27 @@ class TestBitgetExecutionEngine:
 
         headers = execution_engine._get_headers(method, request_path, body)
 
-        assert 'ACCESS-KEY' in headers
-        assert 'ACCESS-SIGN' in headers
-        assert 'ACCESS-TIMESTAMP' in headers
-        assert 'ACCESS-PASSPHRASE' in headers
-        assert 'Content-Type' in headers
+        assert "ACCESS-KEY" in headers
+        assert "ACCESS-SIGN" in headers
+        assert "ACCESS-TIMESTAMP" in headers
+        assert "ACCESS-PASSPHRASE" in headers
+        assert "Content-Type" in headers
 
-        assert headers['ACCESS-KEY'] == execution_engine.config.api_key
-        assert headers['ACCESS-PASSPHRASE'] == execution_engine.config.passphrase
-        assert headers['Content-Type'] == 'application/json'
+        assert headers["ACCESS-KEY"] == execution_engine.config.api_key
+        assert headers["ACCESS-PASSPHRASE"] == execution_engine.config.passphrase
+        assert headers["Content-Type"] == "application/json"
 
     @pytest.mark.asyncio
     async def test_engine_start_stop(self, execution_engine):
         """Test engine start and stop operations"""
         # Mock the WebSocket connection loop to avoid actual connections
-        with patch.object(execution_engine, '_ws_connection_loop', new_callable=AsyncMock):
+        with patch.object(
+            execution_engine, "_ws_connection_loop", new_callable=AsyncMock
+        ):
             await execution_engine.start()
 
             assert execution_engine.running is True
-            assert execution_engine.metrics['start_time'] is not None
+            assert execution_engine.metrics["start_time"] is not None
             assert execution_engine.ws_task is not None
 
             await execution_engine.stop()
@@ -496,10 +497,7 @@ class TestBitgetExecutionEngine:
         execution_engine.circuit_breaker.is_open = True
 
         order = Order(
-            symbol="BTCUSDT",
-            side=OrderSide.BUY,
-            order_type=OrderType.MARKET,
-            size=0.1
+            symbol="BTCUSDT", side=OrderSide.BUY, order_type=OrderType.MARKET, size=0.1
         )
 
         result = await execution_engine.place_order(order)
@@ -509,24 +507,20 @@ class TestBitgetExecutionEngine:
     async def test_engine_place_order_success(self, execution_engine):
         """Test successful order placement"""
         order = Order(
-            symbol="BTCUSDT",
-            side=OrderSide.BUY,
-            order_type=OrderType.MARKET,
-            size=0.1
+            symbol="BTCUSDT", side=OrderSide.BUY, order_type=OrderType.MARKET, size=0.1
         )
 
         # Mock successful HTTP response
         mock_response_data = {
-            'code': '00000',
-            'msg': 'success',
-            'data': {
-                'orderId': 'test_order_123',
-                'clientOid': 'test_client_123'
-            }
+            "code": "00000",
+            "msg": "success",
+            "data": {"orderId": "test_order_123", "clientOid": "test_client_123"},
         }
 
-        with patch('project_chimera.execution.bitget.AIOHTTP_AVAILABLE', False):
-            with patch('project_chimera.execution.bitget.MockHTTPClient') as mock_client_class:
+        with patch("project_chimera.execution.bitget.AIOHTTP_AVAILABLE", False):
+            with patch(
+                "project_chimera.execution.bitget.MockHTTPClient"
+            ) as mock_client_class:
                 mock_session = AsyncMock()
                 mock_response = AsyncMock()
                 mock_response.json.return_value = mock_response_data
@@ -538,31 +532,26 @@ class TestBitgetExecutionEngine:
                 result = await execution_engine.place_order(order)
 
                 assert result is True
-                assert order.order_id == 'test_order_123'
+                assert order.order_id == "test_order_123"
                 assert order.status == OrderStatus.OPEN
                 assert order.created_time is not None
-                assert execution_engine.metrics['orders_placed'] == 1
-                assert 'test_order_123' in execution_engine.orders
+                assert execution_engine.metrics["orders_placed"] == 1
+                assert "test_order_123" in execution_engine.orders
 
     @pytest.mark.asyncio
     async def test_engine_place_order_failure(self, execution_engine):
         """Test failed order placement"""
         order = Order(
-            symbol="BTCUSDT",
-            side=OrderSide.BUY,
-            order_type=OrderType.MARKET,
-            size=0.1
+            symbol="BTCUSDT", side=OrderSide.BUY, order_type=OrderType.MARKET, size=0.1
         )
 
         # Mock failed HTTP response
-        mock_response_data = {
-            'code': '40001',
-            'msg': 'Invalid symbol',
-            'data': None
-        }
+        mock_response_data = {"code": "40001", "msg": "Invalid symbol", "data": None}
 
-        with patch('project_chimera.execution.bitget.AIOHTTP_AVAILABLE', False):
-            with patch('project_chimera.execution.bitget.MockHTTPClient') as mock_client_class:
+        with patch("project_chimera.execution.bitget.AIOHTTP_AVAILABLE", False):
+            with patch(
+                "project_chimera.execution.bitget.MockHTTPClient"
+            ) as mock_client_class:
                 mock_session = AsyncMock()
                 mock_response = AsyncMock()
                 mock_response.json.return_value = mock_response_data
@@ -574,7 +563,7 @@ class TestBitgetExecutionEngine:
                 result = await execution_engine.place_order(order)
 
                 assert result is False
-                assert execution_engine.metrics['orders_failed'] == 1
+                assert execution_engine.metrics["orders_failed"] == 1
 
     @pytest.mark.asyncio
     async def test_engine_order_callbacks(self, execution_engine):
@@ -590,24 +579,23 @@ class TestBitgetExecutionEngine:
         execution_engine.order_callbacks.append(test_callback)
 
         order = Order(
-            symbol="BTCUSDT",
-            side=OrderSide.BUY,
-            order_type=OrderType.MARKET,
-            size=0.1
+            symbol="BTCUSDT", side=OrderSide.BUY, order_type=OrderType.MARKET, size=0.1
         )
 
         # Mock successful response to trigger callback
         mock_response_data = {
-            'code': '00000',
-            'msg': 'success',
-            'data': {
-                'orderId': 'test_order_callback',
-                'clientOid': 'test_client_callback'
-            }
+            "code": "00000",
+            "msg": "success",
+            "data": {
+                "orderId": "test_order_callback",
+                "clientOid": "test_client_callback",
+            },
         }
 
-        with patch('project_chimera.execution.bitget.AIOHTTP_AVAILABLE', False):
-            with patch('project_chimera.execution.bitget.MockHTTPClient') as mock_client_class:
+        with patch("project_chimera.execution.bitget.AIOHTTP_AVAILABLE", False):
+            with patch(
+                "project_chimera.execution.bitget.MockHTTPClient"
+            ) as mock_client_class:
                 mock_session = AsyncMock()
                 mock_response = AsyncMock()
                 mock_response.json.return_value = mock_response_data
@@ -626,13 +614,21 @@ class TestBitgetExecutionEngine:
         initial_metrics = execution_engine.metrics.copy()
 
         # Test metric updates
-        execution_engine.metrics['orders_placed'] += 1
-        execution_engine.metrics['orders_filled'] += 1
-        execution_engine.metrics['api_errors'] += 1
+        execution_engine.metrics["orders_placed"] += 1
+        execution_engine.metrics["orders_filled"] += 1
+        execution_engine.metrics["api_errors"] += 1
 
-        assert execution_engine.metrics['orders_placed'] == initial_metrics['orders_placed'] + 1
-        assert execution_engine.metrics['orders_filled'] == initial_metrics['orders_filled'] + 1
-        assert execution_engine.metrics['api_errors'] == initial_metrics['api_errors'] + 1
+        assert (
+            execution_engine.metrics["orders_placed"]
+            == initial_metrics["orders_placed"] + 1
+        )
+        assert (
+            execution_engine.metrics["orders_filled"]
+            == initial_metrics["orders_filled"] + 1
+        )
+        assert (
+            execution_engine.metrics["api_errors"] == initial_metrics["api_errors"] + 1
+        )
 
     def test_engine_order_management(self, execution_engine):
         """Test order management functionality"""
@@ -641,7 +637,7 @@ class TestBitgetExecutionEngine:
             side=OrderSide.BUY,
             order_type=OrderType.LIMIT,
             size=0.1,
-            price=50000.0
+            price=50000.0,
         )
         order.order_id = "test_order_123"
 
@@ -666,7 +662,7 @@ class TestBitgetExecutionEngine:
             price=50000.0,
             fee=0.001,
             fee_currency="USDT",
-            timestamp=datetime.now()
+            timestamp=datetime.now(),
         )
 
         # Add fill to engine

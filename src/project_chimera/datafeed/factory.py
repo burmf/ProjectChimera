@@ -68,7 +68,7 @@ class DataFeedFactory:
         """Create a complete data feed"""
 
         # Create adapter
-        adapter = cls.create_adapter(exchange_type, exchange_config or {})
+        adapter = cls.create_adapter(exchange_type, exchange_type.value, exchange_config or {})
 
         # Create feed
         feed = AsyncDataFeed(adapter=adapter, symbols=symbols, config=feed_config or {})
@@ -104,7 +104,7 @@ def create_datafeed(
 
     # Parse exchange type
     try:
-        exchange_type = ExchangeType(exchange.lower())
+        exchange_type = ExchangeType(exchange)
     except ValueError:
         raise ValueError(f"Unsupported exchange: {exchange}")
 
